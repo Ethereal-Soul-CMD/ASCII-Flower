@@ -949,10 +949,10 @@ const fg = document.createElement('canvas'), fctx = fg.getContext('2d');
 const g1 = document.createElement('canvas'), g1x = g1.getContext('2d');
 const g2 = document.createElement('canvas'), g2x = g2.getContext('2d');
 
-const RAMP = 'tfjkhdbYVXZCUSOQ0G$8B%&#@';
-const DISK = '0@O%Q0';
+const RAMP = '.:-=+<>ivrtxzcjfunoaeQ0$8B%&#@';
+const DISK = 'o0@*Oo';
 const ANTH = '@0o';
-const STEMR = 'tfkhdUO0Q8%$B&';
+const STEMR = ':;!i1lj0O8%Q$8B';
 const BEARD = "\";:'^~,";
 const PITCH = .2;
 const CONTOUR = .07;
@@ -974,17 +974,17 @@ const fit = { R: 1, ymin: 0, ymax: 3 };
 function newSeed() { return Math.floor(Math.random() * 2176782336).toString(36).padStart(6, '0'); }
 
 function resize() {
-  const w = window.innerWidth, h = window.innerHeight, dpr = Math.min(window.devicePixelRatio || 1, w * h > 900000 ? 2 : 3);
+  const w = window.innerWidth, h = window.innerHeight, dpr = Math.min(window.devicePixelRatio || 1, w * h > 900000 ? 1.5 : 2);
   Object.assign(view, { w, h, dpr });
   for (const c of [canvas, fg]) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
   canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
   g1.width = Math.max(1, Math.round(w / 4)); g1.height = Math.max(1, Math.round(h / 4));
   g2.width = Math.max(1, Math.round(w / 12)); g2.height = Math.max(1, Math.round(h / 12));
   const portrait = h > w;
-  view.cellH = clamp(h / (portrait ? 165 : 128), 4.6, 13) / view.detail;
+  view.cellH = clamp(h / (portrait ? 130 : 102), 6, 15) / view.detail;
   view.cellW = view.cellH / 1.72;
   view.cols = Math.ceil(w / view.cellW); view.rows = Math.ceil(h / view.cellH);
-  view.font = Math.min(view.cellW / .58, view.cellH * 1.0);
+  view.font = Math.min(view.cellW / .6, view.cellH * .95);
   const n = view.cols * view.rows;
   zb = new Float32Array(n); win = new Int32Array(n); ghost = new Float32Array(n);
   prevCls = new Int8Array(n); prevRi = new Int8Array(n); prevKind = new Int8Array(n); curCls = new Int8Array(n); curRi = new Int8Array(n); curKind = new Int8Array(n);
@@ -1109,7 +1109,7 @@ function frame(now) {
   }
   falls = falls.filter(f => f.p[1] > fit.ymin - .4);
   // keep the point count near the budget: dense flowers get thinner sampling, sparse ones full detail
-  const budget = 90000;
+  const budget = 55000;
   if (NP > budget * 1.1 && densScale > .7) densScale = Math.max(.7, Math.floor(densScale * Math.sqrt(budget / NP) * 20) / 20);
 
   // splat into the character grid
@@ -1261,7 +1261,7 @@ function frame(now) {
   const skyA = skyLevel * alpha;
   drawSky(fctx, T, skyA, dt);
   fctx.globalAlpha = alpha;
-  fctx.font = `700 ${view.font.toFixed(2)}px ${FONT}`;
+  fctx.font = `${view.font.toFixed(2)}px ${FONT}`;
   fctx.textBaseline = 'top';
   const yo = (cellH - view.font) * .5;
   for (const [q, list] of buckets) {
