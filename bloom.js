@@ -346,16 +346,11 @@ function makeGenome(seed) {
   }
 
   // greens
-  const gh = type === 'lotus' ? R.range(140, 160) : type === 'carnation' || type === 'iris' ? R.range(140, 165) : (type === 'tulip' ? R.range(105, 125) : R.range(95, 135));
-  const gs = type === 'tulip' || type === 'carnation' ? .55 : type === 'iris' ? .7 : type === 'poppy' ? .75 : 1;
+  const gh = R.range(105, 128), gs = 1;
   G.green = {
     dark: hsv(gh + 5, .85 * gs, .26), body: hsv(gh, .78 * gs, .68), light: hsv(gh - 12, .55 * gs, .95),
     stem: hsv(gh - 8, .72 * gs, .74), vein: hsv(gh - 15, .45 * gs, 1),
   };
-  if (type === 'magnolia' || (type === 'hibiscus' && R.chance(.6))) {
-    const bh = R.range(18, 30);
-    G.stemPal = { dark: hsv(bh, .6, .2), stem: hsv(bh, .45, .45), light: hsv(bh + 8, .3, .65) };
-  }
   G.sepalPal = { base: G.green.dark, body: G.green.body, tip: G.green.light, edge: G.green.light, edgeAmt: .2, edgeStart: .8, spot: G.green.dark };
 
   // head orientation and stem
@@ -371,14 +366,6 @@ function makeGenome(seed) {
     P0: [0, 0, 0], P1: [R.range(-.3, .3), H * R.range(.25, .45), R.range(-.2, .2)], P2: sub(P3, mul(up, H * R.range(.22, .36))), P3,
   };
   G.pivot = [P3[0] * .5, 0, P3[2] * .5];
-  if (type === 'rose') {
-    const n = R.int(4, 8);
-    for (let i = 0; i < n; i++) G.thorns.push({ u: R.range(.1, .85), a: R.range(0, TAU), len: R.range(.04, .07) });
-  }
-  if (type === 'sunflower' || type === 'poppy') { // fine hairs along the stem
-    const n = type === 'sunflower' ? 70 : 50;
-    for (let i = 0; i < n; i++) G.thorns.push({ u: R.range(.05, .97), a: R.range(0, TAU), len: R.range(.012, .025), col: mixc(G.green.light, [.8, .85, .75], .5) });
-  }
   if (type === 'carnation') { // swollen nodes
     G.nodes = [R.range(.22, .3), R.range(.5, .58), R.range(.76, .82)];
   }
@@ -498,7 +485,7 @@ function push(x, y, z, nx, ny, nz, r, g, b, tx, ty, tz, order, edge, kind, h, si
   NP++;
 }
 
-const GMAX = 72 * 52;
+const GMAX = 100 * 72;
 const GP = new Float32Array(GMAX * 3), GC = new Float32Array(GMAX * 3), GO = new Float32Array(GMAX);
 const GK = new Uint8Array(GMAX), GN = new Float32Array(GMAX * 3), GT = new Float32Array(GMAX * 3);
 
@@ -549,15 +536,15 @@ function emitCurve(fn, n, color, o0, o1, kind, id, gloss = .2) {
 }
 
 // ---------------------------------------------------------------- petals
-const SR = new Float32Array(96), SY = new Float32Array(96), SPh = new Float32Array(96);
+const SR = new Float32Array(112), SY = new Float32Array(112), SPh = new Float32Array(112);
 // per-column scratch for the petal builder
-const CV = new Float32Array(64), CAV = new Float32Array(64), CNOTCH = new Float32Array(64), CFR = new Float32Array(64);
-const CRS = new Float32Array(64), CRC = new Float32Array(64), CVEIN = new Float32Array(64), CSTS = new Float32Array(64), CSTC = new Float32Array(64);
-const CBL = new Float32Array(64), CBR = new Float32Array(64), CCS = new Float32Array(64), CCC = new Float32Array(64);
+const CV = new Float32Array(80), CAV = new Float32Array(80), CNOTCH = new Float32Array(80), CFR = new Float32Array(80);
+const CRS = new Float32Array(80), CRC = new Float32Array(80), CVEIN = new Float32Array(80), CSTS = new Float32Array(80), CSTC = new Float32Array(80);
+const CBL = new Float32Array(80), CBR = new Float32Array(80), CCS = new Float32Array(80), CCC = new Float32Array(80);
 function emitPetal(P, open, theta, M, T, pal, orderBase, orderSpan, headH, id, dens, lenMul) {
   const len = P.len * lenMul, W = P.W * lenMul;
-  const nu = clamp(Math.ceil(len * dens * 1.45) + 4, 6, 70) | 0;
-  let nv = clamp(Math.ceil(2 * W * dens * 1.35) + 3, 5, 51) | 0; if (nv % 2 === 0) nv++;
+  const nu = clamp(Math.ceil(len * dens * 1.5) + 4, 6, 96) | 0;
+  let nv = clamp(Math.ceil(2 * W * dens * 1.4) + 3, 5, 71) | 0; if (nv % 2 === 0) nv++;
   const ds = len / (nu - 1);
   let r = P.r0, y = P.y0;
   for (let i = 0; i < nu; i++) {
@@ -571,7 +558,7 @@ function emitPetal(P, open, theta, M, T, pal, orderBase, orderSpan, headH, id, d
   const ct = Math.cos(theta), st = Math.sin(theta);
   if (P.pal) pal = P.pal;
   const { base, body, tip, edge, edgeAmt, edgeStart, spot } = pal;
-  const sph = hash1(id * 3 + 1) * 6;
+  const sph = hash1(id * 3 + 1) * 6, tone = .9 + .2 * hash1(id * 5 + 2);
   const reshape = P.notch > 0 || P.fringe > 0;
   const ruffleK = P.ruffle * W, crinkK = P.crinkle * W * .045;
   const stripe = pal.stripe, blotch = P.blotch ? pal.blotch : null, beardC = P.beard ? P.beardC : null;
@@ -653,6 +640,7 @@ function emitPetal(P, open, theta, M, T, pal, orderBase, orderSpan, headH, id, d
       if (P.spots && u > .12 && u < .62 && av < .75 && hash1(id * 131 + i * 977 + j * 31) < .09 * P.spots) {
         cr = spot[0]; cg = spot[1]; cb = spot[2]; mm = 1;
       } else if (!kind && u > .35 && hash1(id * 53 + i * 613 + j * 7) < .0012) kind = 3; // dew drop
+      mm *= tone;
       GC[k] = cr * mm; GC[k + 1] = cg * mm; GC[k + 2] = cb * mm;
       const oy = ly / headH;
       GO[m] = orderBase + orderSpan * (oy < 0 ? 0 : oy > 1 ? 1 : oy);
@@ -723,8 +711,8 @@ function emitBlade(origin, dOut, len, W, elev, droop, fold, serr, teeth, shape, 
   const sc = lerp(.3, 1, open);
   len *= sc; W *= sc * lerp(.4, 1, open);
   fold = lerp(1.6, fold, open);
-  const nu = clamp(Math.ceil(len * dens * 1.3) + 4, 6, 64) | 0;
-  let nv = clamp(Math.ceil(2 * W * dens * 1.2) + 3, 5, 48) | 0; if (nv % 2 === 0) nv++;
+  const nu = clamp(Math.ceil(len * dens * 1.35) + 4, 6, 96) | 0;
+  let nv = clamp(Math.ceil(2 * W * dens * 1.25) + 3, 5, 71) | 0; if (nv % 2 === 0) nv++;
   const up = [0, 1, 0], lat = norm([dOut[2], 0, -dOut[0]]);
   const ds = len / (nu - 1);
   let p = origin.slice(), m = 0;
@@ -932,7 +920,7 @@ function makeSky(seed) {
     if (c < 0 || r < 0 || c >= cols || r >= rows) return;
     const id = r * cols + c; if (used.has(id)) return; used.add(id);
     stars.push({ c, r, k, a: k === 0 ? R.range(.18, .4) : k === 1 ? R.range(.5, .9) : 1,
-      sp: R.range(.9, 4.2), ph: R.range(0, TAU), cool: R.range(0, 1) });
+      sp: k === 2 ? R.range(.9, 4.2) : R.range(3, 7.5), ph: R.range(0, TAU), cool: R.range(0, 1) });
   };
   const nFaint = Math.round(n * .011), nPlus = Math.round(n * .0055), nBright = Math.round(n * .0022);
   for (let i = 0; i < nFaint; i++) put(R.int(0, cols - 1), R.int(0, rows - 1), 0);
@@ -960,6 +948,7 @@ const ANTH = '@0o';
 const STEMR = ':;!i1lj0O8%Q$8B';
 const BEARD = "\";:'^~,";
 const PITCH = .2;
+const CONTOUR = .07;
 const SPARK = ['+', '+', '.', '·', "'", '+'];
 const FONT = 'ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace';
 const D = 7;            // camera distance in world units
@@ -978,14 +967,14 @@ const fit = { R: 1, ymin: 0, ymax: 3 };
 function newSeed() { return Math.floor(Math.random() * 2176782336).toString(36).padStart(6, '0'); }
 
 function resize() {
-  const w = window.innerWidth, h = window.innerHeight, dpr = Math.min(window.devicePixelRatio || 1, w * h > 900000 ? 1.5 : 2);
+  const w = window.innerWidth, h = window.innerHeight, dpr = Math.min(window.devicePixelRatio || 1, w * h > 900000 ? 2 : 3);
   Object.assign(view, { w, h, dpr });
   for (const c of [canvas, fg]) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
   canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
   g1.width = Math.max(1, Math.round(w / 4)); g1.height = Math.max(1, Math.round(h / 4));
   g2.width = Math.max(1, Math.round(w / 12)); g2.height = Math.max(1, Math.round(h / 12));
   const portrait = h > w;
-  view.cellH = clamp(h / (portrait ? 130 : 102), 6, 15) / view.detail;
+  view.cellH = clamp(h / (portrait ? 165 : 128), 4.6, 13) / view.detail;
   view.cellW = view.cellH / 1.72;
   view.cols = Math.ceil(w / view.cellW); view.rows = Math.ceil(h / view.cellH);
   view.font = Math.min(view.cellW / .6, view.cellH * .95);
@@ -1109,7 +1098,7 @@ function frame(now) {
   }
   falls = falls.filter(f => f.p[1] > fit.ymin - .4);
   // keep the point count near the budget: dense flowers get thinner sampling, sparse ones full detail
-  const budget = 55000;
+  const budget = 90000;
   if (NP > budget) densScale = Math.max(.55, densScale * Math.sqrt(budget / NP) * .98 + densScale * .02);
   else if (NP < budget * .7) densScale = Math.min(1, densScale * 1.02);
 
@@ -1166,7 +1155,17 @@ function frame(now) {
     const side = BUF[o + 16];
     if (side !== 0 && side * facing < 0) { r *= .78; g *= .78; b *= .8; }
     const depth = .72 + .28 * clamp((zb[idx] + zr) / (2 * zr));
-    const k = (.36 + 1.0 * lum) * depth;
+    // look at the neighbours in the depth buffer
+    const cc0 = idx % cols, z0 = zb[idx];
+    let ao = 1, gx = 0, gy = 0;
+    if (BUF[o + 14] !== 5) {
+      const nL = cc0 > 0 && win[idx - 1] >= 0 ? zb[idx - 1] : null, nR = cc0 < cols - 1 && win[idx + 1] >= 0 ? zb[idx + 1] : null;
+      const nU = idx >= cols && win[idx - cols] >= 0 ? zb[idx - cols] : null, nD = idx + cols < cols * rows && win[idx + cols] >= 0 ? zb[idx + cols] : null;
+      for (const nzv of [nL, nR, nU, nD]) if (nzv !== null && nzv > z0 + .05) ao *= .84; // tucked under a nearer petal
+      if (nL !== null && nL < z0 - CONTOUR) gx -= 1; if (nR !== null && nR < z0 - CONTOUR) gx += 1;
+      if (nU !== null && nU < z0 - CONTOUR) gy -= 1; if (nD !== null && nD < z0 - CONTOUR) gy += 1;
+    }
+    const k = (.36 + 1.0 * lum) * depth * ao;
     r = r * k + r * rim * .6 + spec; g = g * k + g * rim * .6 + spec; b = b * k + b * rim * .6 + spec;
     const h = BUF[o + 15], kind = BUF[o + 14], ord = BUF[o + 12];
     let ch;
@@ -1184,6 +1183,7 @@ function frame(now) {
         if (model) { tx = V[0] * a + V[1] * bb + V[2] * c; ty = V[3] * a + V[4] * bb + V[5] * c; } else { tx = a; ty = bb; }
         isStroke = true;
       } else if (nz < (kind === 5 ? .5 : .24)) { tx = -ny; ty = nx; isStroke = true; }
+      else if (gx !== 0 || gy !== 0) { tx = -gy; ty = -gx; isStroke = true; } // this petal overlaps one behind it
       if (isStroke) {
         const dx = tx, dy = -ty, ang = Math.atan2(Math.abs(dy) * 1.0, Math.abs(dx) * 1.0);
         if (ang < .42) ch = (idx + cols < cols * rows && win[idx + cols] < 0) ? '_' : '-';
@@ -1266,7 +1266,7 @@ function drawSky(c, t, A, dt) {
   for (const s of sky.stars) {
     if (!cellFree(s.c, s.r)) continue;
     const tw = .5 + .5 * Math.sin(t * s.sp + s.ph);
-    const a = A * s.a * (s.k === 0 ? .6 + .4 * tw : .35 + .65 * tw * tw);
+    const a = A * s.a * (s.k === 0 ? .45 + .55 * tw * tw : s.k === 1 ? .2 + .8 * tw * tw * tw : .35 + .65 * tw * tw);
     if (a < .03) continue;
     const g = (225 + 30 * (1 - s.cool)) | 0;
     const x = s.c * cellW, y = s.r * cellH;
@@ -1280,10 +1280,10 @@ function drawSky(c, t, A, dt) {
   if (!paused) {
     sky.nextFlare -= dt;
     if (sky.nextFlare <= 0 && skyLevel > .05) {
-      sky.nextFlare = sky.R.range(.15, .5) / Math.max(.25, skyLevel);
-      if (sky.flares.length < 5) {
+      sky.nextFlare = sky.R.range(.04, .16) / Math.max(.25, skyLevel);
+      if (sky.flares.length < 10) {
         const top = project([G.pivot[0], fit.ymax, G.pivot[2]]), bot = project([G.pivot[0], fit.ymin, G.pivot[2]]);
-        const rad = fit.R * view.S * 1.35;
+        const rad = fit.R * view.S * 1.6;
         const x = view.cx + (sky.R.next() - .5) * 2 * rad, y = lerp(top[1] - cellH * 4, bot[1], sky.R.next());
         sky.flares.push({ c: Math.floor(x / cellW), r: Math.floor(y / cellH), life: 0, max: sky.R.range(.5, 1),
           L: sky.R.int(3, 6), D: sky.R.int(1, 3), H: sky.R.int(3, 5) });
