@@ -346,10 +346,16 @@ function makeGenome(seed) {
   }
 
   // greens
-  const gh = R.range(105, 128), gs = 1;
+  // the green follows the flower: warm blooms get yellow-greens, cool blooms blue-greens,
+  // pale blooms soft muted greens, deep blooms deep greens
+  const fh = FAM[fam][1][0], fs = FAM[fam][1][1], fv = FAM[fam][1][2];
+  const warm = fh < 75 || fh > 290, cool = fh >= 170 && fh <= 290;
+  const gh = (warm ? R.range(88, 108) : cool ? R.range(128, 148) : R.range(105, 125)) + R.range(-4, 4);
+  const gs = lerp(.42, .78, clamp(fs * 1.1)) * R.range(.92, 1.05);
+  const gv = lerp(.82, 1, clamp(fv)) * (fs < .25 ? .9 : 1) * lerp(.85, 1, clamp(fv));
   G.green = {
-    dark: hsv(gh + 5, .85 * gs, .26), body: hsv(gh, .78 * gs, .68), light: hsv(gh - 12, .55 * gs, .95),
-    stem: hsv(gh - 8, .72 * gs, .74), vein: hsv(gh - 15, .45 * gs, 1),
+    dark: hsv(gh + 6, clamp(gs * 1.05), .18 * gv), body: hsv(gh, gs, .5 * gv), light: hsv(gh - 8, gs * .75, .7 * gv),
+    stem: hsv(gh - 4, gs * .95, .55 * gv), vein: hsv(gh - 10, gs * .6, .78 * gv),
   };
   G.sepalPal = { base: G.green.dark, body: G.green.body, tip: G.green.light, edge: G.green.light, edgeAmt: .2, edgeStart: .8, spot: G.green.dark };
 
@@ -432,7 +438,7 @@ function makeGenome(seed) {
       psi += R.range(2.0, 3.4);
       lv.push(leaf({ u: lerp(.2, .78, i / (n - 1)), psi, len: R.range(.26, .34) * size, W: R.range(.1, .14) * size,
         elev: R.range(.8, 1.15), droop: R.range(.3, .6), fold: .3, serr: type === 'hibiscus' ? R.range(.12, .22) : 0, teeth: R.int(9, 13),
-        shape: 'ovate', petiole: R.range(.06, .12), gloss: .6 }));
+        shape: 'ovate', petiole: R.range(.06, .12), gloss: .3 }));
     }
   } else if (type === 'iris') {
     const n = R.int(3, 5);
@@ -485,7 +491,7 @@ function push(x, y, z, nx, ny, nz, r, g, b, tx, ty, tz, order, edge, kind, h, si
   NP++;
 }
 
-const GMAX = 100 * 72;
+const GMAX = 240 * 80;
 const GP = new Float32Array(GMAX * 3), GC = new Float32Array(GMAX * 3), GO = new Float32Array(GMAX);
 const GK = new Uint8Array(GMAX), GN = new Float32Array(GMAX * 3), GT = new Float32Array(GMAX * 3);
 
@@ -670,7 +676,8 @@ function stemFrame(S, u) {
 
 function emitStem(G, st, dens, cellRatio) {
   const S = G.stem, Rr = .03 * S.thick, gr = G.stemPal || G.green;
-  const nu = clamp(Math.ceil(S.H * dens / cellRatio * 1.6), 20, 220) | 0, nv = 12;
+  const nu = clamp(Math.ceil(S.H * dens / cellRatio * 1.7), 20, 240) | 0;
+  const nv = clamp(Math.ceil(TAU * Rr * 1.9 * dens * 1.7), 12, 80) | 0;
   let m = 0;
   for (let i = 0; i < nu; i++) {
     const u = i / (nu - 1), F = stemFrame(S, u);
@@ -1064,10 +1071,10 @@ function frame(now) {
   const st = { head, bloom, breathe, time: T, settle };
 
   // build geometry
-  const dens = view.S / view.cellW * densScale;
+  const dens0 = view.S / view.cellW, dens = dens0 * densScale;
   NP = 0;
-  emitStem(G, st, dens, view.cellH / view.cellW);
-  emitLeaves(G, st, dens);
+  emitStem(G, st, dens0, view.cellH / view.cellW);
+  emitLeaves(G, st, dens0);
   emitHead(G, st, dens);
   NMODEL = NP;
 
@@ -1099,7 +1106,7 @@ function frame(now) {
   falls = falls.filter(f => f.p[1] > fit.ymin - .4);
   // keep the point count near the budget: dense flowers get thinner sampling, sparse ones full detail
   const budget = 90000;
-  if (NP > budget) densScale = Math.max(.55, densScale * Math.sqrt(budget / NP) * .98 + densScale * .02);
+  if (NP > budget) densScale = Math.max(.7, densScale * Math.sqrt(budget / NP) * .98 + densScale * .02);
   else if (NP < budget * .7) densScale = Math.min(1, densScale * 1.02);
 
   // splat into the character grid
@@ -1124,6 +1131,25 @@ function frame(now) {
       continue;
     }
     if (qz > zb[idx]) { zb[idx] = qz; win[idx] = p; }
+  }
+
+  // fill pinholes: an empty cell between two filled cells at about the same depth
+  {
+    const n = cols * rows, fill = [];
+    for (let pass = 0; pass < 2; pass++) {
+      fill.length = 0;
+      for (let idx = cols; idx < n - cols; idx++) {
+        if (win[idx] >= 0) continue;
+        const c = idx % cols; if (c === 0 || c === cols - 1) continue;
+        const pairs = [[idx - 1, idx + 1], [idx - cols, idx + cols], [idx - cols - 1, idx + cols + 1], [idx - cols + 1, idx + cols - 1]];
+        for (const [a, b] of pairs) {
+          if (win[a] >= 0 && win[b] >= 0 && Math.abs(zb[a] - zb[b]) < .08) {
+            fill.push(idx, zb[a] > zb[b] ? a : b, (zb[a] + zb[b]) * .5); break;
+          }
+        }
+      }
+      for (let i = 0; i < fill.length; i += 3) { win[fill[i]] = win[fill[i + 1]]; zb[fill[i]] = fill[i + 2]; }
+    }
   }
 
   // shade cells and choose glyphs
