@@ -99,34 +99,63 @@ const FAM = {
   sunset:    [[45, .95, .70], [32, .86, .98], [355, .85, .95], [350, .70, 1]],
   picotee:   [[90, .18, .70], [0, 0, .96], [340, .22, 1], [340, .88, 1]],
   stargazer: [[330, .88, .50], [335, .70, .90], [340, .42, 1], [0, 0, 1]],
+  peach:     [[18, .55, .62], [22, .38, .98], [28, .24, 1], [35, .12, 1]],
+  apricot:   [[28, .85, .62], [32, .55, .98], [36, .35, 1], [40, .18, 1]],
+  gold:      [[34, 1, .62], [42, .95, .98], [46, .85, 1], [50, .6, 1]],
+  lemon:     [[55, .6, .7], [57, .45, .98], [58, .3, 1], [60, .15, 1]],
+  burgundy:  [[345, .95, .22], [348, .9, .5], [350, .82, .72], [355, .6, .85]],
+  midnight:  [[350, .95, .12], [352, .92, .32], [355, .85, .5], [358, .7, .62]],
+  sky:       [[205, .7, .55], [208, .42, .95], [212, .25, 1], [215, .1, 1]],
+  indigo:    [[255, .9, .3], [258, .75, .7], [262, .55, .92], [265, .3, 1]],
+  lavender:  [[262, .45, .55], [265, .3, .9], [268, .2, 1], [270, .1, 1]],
+  chartreuse:[[80, .85, .5], [76, .6, .92], [70, .45, 1], [65, .25, 1]],
+  fuchsia:   [[305, .95, .45], [310, .85, .92], [315, .65, 1], [320, .35, 1]],
+  flame:     [[0, .95, .45], [8, .9, .9], [30, .85, 1], [48, .8, 1]],
+  ocean:     [[225, .85, .4], [218, .55, .88], [210, .25, 1], [0, 0, 1]],
+  autumn:    [[15, .9, .32], [22, .85, .7], [38, .9, .95], [48, .8, 1]],
+  saucer:    [[325, .7, .58], [330, .4, .94], [340, .1, 1], [0, 0, 1]],
+  peppermint:[[0, .1, .8], [0, 0, .97], [0, 0, 1], [350, .75, 1]],
 };
-const FAM_EDGE = { picotee: [0.95, 0.55], stargazer: [0.75, 0.6], sunset: [0.5, 0.7] };
+// some families carry streaks along the veins: [color hsv, streak count]
+const FAM_STRIPE = { peppermint: [[352, .85, .85], 7], flame: [[2, .9, .8], 5], autumn: [[10, .9, .45], 9] };
+const FAM_EDGE = { picotee: [0.95, 0.55], stargazer: [0.75, 0.6], sunset: [0.5, 0.7], ocean: [0.7, 0.55], saucer: [0.4, 0.8], peppermint: [0.5, 0.8] };
 
 function makePalette(R, fam) {
   const dh = R.range(-7, 7);
   const c = FAM[fam].map(([h, s, v]) => hsv(h + dh, clamp(s * R.range(0.92, 1.05)), clamp(v)));
   const e = FAM_EDGE[fam] || [R.range(0.25, 0.45), 0.75];
   return { fam, base: c[0], body: c[1], tip: c[2], edge: c[3], edgeAmt: e[0], edgeStart: e[1],
-    spot: hsv(FAM[fam][0][0] + dh - 10, 0.9, 0.22) };
+    spot: hsv(FAM[fam][0][0] + dh - 10, 0.9, 0.22),
+    blotch: FAM[fam][1][1] < .3 ? hsv(350 + dh, .9, .42) : hsv(FAM[fam][0][0] + dh - 8, 0.9, .12),
+    stripe: FAM_STRIPE[fam] ? hsv(FAM_STRIPE[fam][0][0] + dh, FAM_STRIPE[fam][0][1], FAM_STRIPE[fam][0][2]) : null,
+    stripeN: FAM_STRIPE[fam] ? FAM_STRIPE[fam][1] : 0 };
 }
 
 // ============================================================ species
 const SPECIES = {
-  rose:    { w: 3.0, fams: ['crimson', 'crimson', 'scarlet', 'pink', 'blush', 'cream', 'yellow', 'coral', 'lilac', 'sunset', 'picotee'] },
-  tulip:   { w: 1.4, fams: ['scarlet', 'yellow', 'pink', 'purple', 'white', 'orange', 'sunset', 'magenta', 'picotee'] },
-  lily:    { w: 1.3, fams: ['white', 'orange', 'stargazer', 'stargazer', 'yellow', 'pink'] },
-  daisy:   { w: 1.4, fams: ['white', 'white', 'yellow', 'pink', 'orange', 'lilac', 'magenta'] },
-  dahlia:  { w: 1.1, fams: ['magenta', 'orange', 'scarlet', 'yellow', 'purple', 'blush', 'sunset'] },
-  peony:   { w: 1.2, fams: ['pink', 'blush', 'coral', 'white', 'magenta', 'crimson'] },
-  lotus:   { w: 1.0, fams: ['pink', 'white', 'blush'] },
-  anemone: { w: 1.0, fams: ['scarlet', 'purple', 'violet', 'white', 'pink', 'crimson'] },
+  rose:    { w: 3.0, fams: ['crimson', 'crimson', 'scarlet', 'pink', 'blush', 'cream', 'yellow', 'coral', 'lilac', 'sunset', 'picotee', 'peach', 'apricot', 'burgundy', 'midnight', 'lavender', 'ocean', 'flame'] },
+  tulip:   { w: 1.4, fams: ['scarlet', 'yellow', 'pink', 'purple', 'white', 'orange', 'sunset', 'magenta', 'picotee', 'flame', 'midnight', 'apricot', 'lavender', 'peppermint'] },
+  lily:    { w: 1.3, fams: ['white', 'orange', 'stargazer', 'stargazer', 'yellow', 'pink', 'apricot', 'burgundy', 'lemon'] },
+  daisy:   { w: 1.4, fams: ['white', 'white', 'yellow', 'pink', 'orange', 'lilac', 'magenta', 'gold', 'sky', 'fuchsia', 'flame'] },
+  dahlia:  { w: 1.1, fams: ['magenta', 'orange', 'scarlet', 'yellow', 'purple', 'blush', 'sunset', 'burgundy', 'apricot', 'flame', 'peach', 'chartreuse'] },
+  peony:   { w: 1.2, fams: ['pink', 'blush', 'coral', 'white', 'magenta', 'crimson', 'peach', 'burgundy', 'lemon'] },
+  lotus:   { w: 1.0, fams: ['pink', 'white', 'blush', 'saucer', 'fuchsia'] },
+  anemone: { w: 1.0, fams: ['scarlet', 'purple', 'violet', 'white', 'pink', 'crimson', 'indigo', 'fuchsia'] },
+  sunflower: { w: 1.2, fams: ['gold', 'gold', 'yellow', 'lemon', 'autumn', 'orange'] },
+  cosmos:  { w: 1.0, fams: ['pink', 'magenta', 'white', 'fuchsia', 'lavender', 'peppermint', 'burgundy'] },
+  hibiscus:{ w: 1.1, fams: ['scarlet', 'pink', 'orange', 'yellow', 'coral', 'peach', 'fuchsia', 'white'] },
+  iris:    { w: 1.1, fams: ['indigo', 'violet', 'purple', 'lavender', 'sky', 'white', 'yellow', 'burgundy', 'ocean'] },
+  poppy:   { w: 1.1, fams: ['scarlet', 'scarlet', 'orange', 'coral', 'white', 'pink', 'burgundy', 'apricot', 'lemon'] },
+  carnation:{ w: 1.0, fams: ['pink', 'crimson', 'white', 'peppermint', 'coral', 'burgundy', 'apricot', 'yellow', 'lavender', 'chartreuse'] },
+  magnolia:{ w: 0.9, fams: ['white', 'blush', 'saucer', 'saucer', 'pink', 'cream'] },
 };
 const GOLDEN = 2.39996323;
 
 function basePetal(o) {
   return Object.assign({ count: 5, len: .5, W: .25, r0: .03, y0: 0, phC0: .3, phC1: -.1, phO0: .5, phO1: 1.2,
     curl: 0, cupC: .9, cupO: .4, wrap: .6, ruffle: .02, rufF: 3, wk: 1.5, we: .5, notch: 0, fringe: 0, fringeF: 18,
-    veins: 6, openMax: 1, delay: 0, rot: 0, spots: 0, gloss: .25, jit: .1 }, o);
+    veins: 6, openMax: 1, delay: 0, rot: 0, spots: 0, gloss: .25, jit: .1,
+    blotch: 0, blotchU: .25, beard: 0, beardC: null, crinkle: 0, pal: null }, o);
 }
 
 function makeGenome(seed) {
@@ -135,7 +164,7 @@ function makeGenome(seed) {
   const fam = R.pick(SPECIES[type].fams);
   const pal = makePalette(R, fam);
   const size = R.range(1.0, 1.25);
-  const G = { seed, type, fam, pal, size, layers: [], centers: [], sepals: null, leaves: [], thorns: [] };
+  const G = { seed, type, fam, pal, size, layers: [], centers: [], sepals: null, leaves: [], thorns: [], stemPal: null };
   const L = [];
 
   if (type === 'rose') {
@@ -211,6 +240,71 @@ function makeGenome(seed) {
     }
     G.centers.push({ kind: 'pod', rp: .1 * size, hp: .08 * size, y0: .02, c: [.78, .82, .28], seed: [.32, .38, .1] });
     G.centers.push({ kind: 'ring', n: 46, r: .11 * size, len: .08 * size, y0: .01, fil: [1, .92, .6], anth: [1, .78, .2] });
+  } else if (type === 'sunflower') {
+    const rc = R.range(.24, .3) * size, count = R.int(21, 34), len = R.range(.42, .52) * size;
+    for (let l = 0; l < 2; l++) {
+      const phO0 = R.range(1.3, 1.45) - l * .15;
+      L.push(basePetal({ count, len: len * (l ? .9 : 1), W: len * R.range(.15, .19), r0: rc * .95, y0: 0,
+        phC0: .1, phC1: -.1, phO0, phO1: phO0 + R.range(.1, .3), curl: R.range(.1, .3), cupC: .6, cupO: .35, wrap: .2,
+        ruffle: .02, rufF: 2, wk: .9, we: 1, veins: 5, delay: l * .08, rot: l * Math.PI / count, jit: .2, gloss: .25 }));
+    }
+    G.centers.push({ kind: 'disk', rc, h: rc * R.range(.12, .22), y0: .01, c0: [.1, .06, .02], c1: [.22, .12, .03], c2: [.42, .25, .05] });
+    G.centers.push({ kind: 'ring', n: 70, r: rc * .82, len: .025 * size, y0: .03, fil: [.5, .3, .05], anth: [1, .78, .15] });
+  } else if (type === 'cosmos') {
+    const count = R.int(8, 9), len = R.range(.42, .52) * size;
+    L.push(basePetal({ count, len, W: len * R.range(.38, .46), r0: .07, y0: 0, phC0: .2, phC1: -.1,
+      phO0: R.range(1.15, 1.35), phO1: R.range(1.35, 1.6), curl: .05, cupC: .7, cupO: .12, wrap: .5,
+      ruffle: .03, rufF: 3, wk: 1.3, we: .5, fringe: R.range(.1, .16), fringeF: R.range(6, 9), veins: 7, jit: .08, gloss: .2 }));
+    G.centers.push({ kind: 'disk', rc: .075 * size, h: .04 * size, y0: .01, c0: [.7, .65, .1], c1: [1, .8, .1], c2: [.95, .62, .05] });
+  } else if (type === 'hibiscus') {
+    const len = R.range(.6, .72) * size;
+    L.push(basePetal({ count: 5, len, W: len * R.range(.52, .6), r0: .03, y0: 0, phC0: .22, phC1: -.12,
+      phO0: R.range(.6, .85), phO1: R.range(1.5, 1.85), curl: R.range(.2, .45), cupC: .9, cupO: .3, wrap: .9,
+      ruffle: R.range(.08, .14), rufF: R.range(3, 5), crinkle: .5, wk: 1.6, we: .5, veins: 14,
+      blotch: R.chance(.85) ? 1 : 0, blotchU: R.range(.18, .28), jit: .08, gloss: .35 }));
+    const eye = pal.blotch;
+    G.centers.push({ kind: 'column', len: len * R.range(.75, .95), y0: .02, c: mixc(pal.body, [1, 1, 1], .1), anth: [1, .85, .2], stig: mixc(eye, [1, .1, .2], .5) });
+  } else if (type === 'iris') {
+    const len = R.range(.55, .66) * size, beardC = R.pick([[1, .8, .1], [1, .55, .1], [1, .95, .7], [.95, .4, .4]]);
+    const twoTone = R.chance(.4) ? makePalette(R, R.pick(['lavender', 'white', 'sky', 'lemon', 'peach'])) : null;
+    L.push(basePetal({ count: 3, len: len * .85, W: len * .3, r0: .03, y0: .03, phC0: .12, phC1: -.12,
+      phO0: R.range(.05, .2), phO1: R.range(-.25, -.05), curl: -.2, cupC: 1, cupO: .95, wrap: .7,
+      ruffle: R.range(.1, .16), rufF: R.range(3, 5), crinkle: .25, wk: 1.4, we: .55, veins: 11, delay: .2,
+      rot: Math.PI / 3, gloss: .35, pal: twoTone }));
+    L.push(basePetal({ count: 3, len, W: len * .36, r0: .03, y0: 0, phC0: .15, phC1: -.1,
+      phO0: R.range(.8, 1.0), phO1: R.range(2.3, 2.7), curl: .4, cupC: .9, cupO: .25, wrap: .6,
+      ruffle: R.range(.08, .14), rufF: R.range(3, 5), crinkle: .2, wk: 1.4, we: .55, veins: 13,
+      beard: 1, beardC, delay: 0, gloss: .35 }));
+  } else if (type === 'poppy') {
+    const len = R.range(.48, .58) * size;
+    for (let l = 0; l < 2; l++) {
+      L.push(basePetal({ count: 2, len: len * (l ? 1 : .92), W: len * R.range(.72, .82), r0: .05, y0: .01 * (1 - l),
+        phC0: .1, phC1: -.25, phO0: R.range(.45, .7) + .1 * l, phO1: R.range(1.15, 1.45) + .1 * l, curl: .1,
+        cupC: 1.1, cupO: .5, wrap: 1, ruffle: R.range(.1, .16), rufF: R.range(2, 4), crinkle: 1, wk: 1.7, we: .45, veins: 10,
+        blotch: R.chance(.7) ? 1 : 0, blotchU: R.range(.14, .22), delay: l === 0 ? .12 : 0, rot: l * Math.PI / 2, gloss: .3 }));
+    }
+    G.centers.push({ kind: 'pod', rp: .065 * size, hp: .09 * size, y0: .02, c: [.45, .58, .32], seed: [.25, .1, .3], rays: R.int(8, 12) });
+    G.centers.push({ kind: 'ring', n: 70, r: .08 * size, len: .07 * size, y0: .02, fil: [.15, .1, .15], anth: [.1, .08, .2] });
+  } else if (type === 'carnation') {
+    const n = R.int(7, 10);
+    for (let l = 0; l < n; l++) {
+      const f = l / (n - 1), len = lerp(.22, .42, f) * size;
+      L.push(basePetal({ count: R.int(5, 8), len, W: len * R.range(.55, .7), r0: .01 + .03 * f, y0: .05 * (1 - f),
+        phC0: lerp(.05, .2, f), phC1: lerp(-.05, -.2, f), phO0: lerp(.1, .95, Math.pow(f, 1.4)), phO1: lerp(.3, 1.45, f),
+        curl: lerp(0, .3, f), cupC: .9, cupO: lerp(.9, .3, f), wrap: .8, ruffle: R.range(.1, .16), rufF: R.range(4, 6), crinkle: .4,
+        wk: 1.5, we: .5, fringe: R.range(.22, .32), fringeF: R.range(20, 28), veins: 5,
+        openMax: lerp(.45, 1, f), delay: (1 - f) * .5, rot: l * GOLDEN, gloss: .2 }));
+    }
+  } else if (type === 'magnolia') {
+    for (let l = 0; l < 3; l++) {
+      const f = l / 2, len = lerp(.52, .6, f) * size;
+      L.push(basePetal({ count: 3, len, W: len * R.range(.38, .46), r0: .04 + .02 * f, y0: 0,
+        phC0: .22, phC1: -.12, phO0: lerp(.12, .6, f), phO1: lerp(.5, 1.2, f) + R.range(0, .2), curl: .12,
+        cupC: 1, cupO: .9, wrap: .6, ruffle: .02, wk: 1.3, we: .6, veins: 8, openMax: lerp(.65, 1, f), delay: (1 - f) * .35,
+        rot: l * Math.PI / 3, gloss: .45 }));
+    }
+    G.centers.push({ kind: 'disk', rc: .05 * size, h: .18 * size, y0: .03, c0: [.75, .85, .45], c1: [.85, .75, .45], c2: [.9, .6, .55] });
+    G.centers.push({ kind: 'ring', n: 40, r: .06 * size, len: .05 * size, y0: .02, fil: [1, .9, .85], anth: [1, .7, .65] });
   } else { // anemone or camellia
     const n = R.int(1, 2), count = R.int(5, 8), len = R.range(.42, .55) * size, camellia = R.chance(.45);
     for (let l = 0; l < n; l++) {
@@ -236,29 +330,44 @@ function makeGenome(seed) {
     const len = (type === 'rose' ? .3 : .2) * size;
     G.sepals = basePetal({ count: 5, len, W: len * .2, r0: .03, y0: -.01, phC0: .25, phC1: -.12, phO0: 1.2, phO1: 2.5, curl: .4,
       cupC: .5, cupO: .3, wrap: .6, wk: .9, we: 1.1, veins: 1, rot: R.range(0, TAU), gloss: .3, ruffle: type === 'rose' ? .05 : .01, rufF: 8 });
+  } else if (type === 'sunflower') {
+    G.sepals = basePetal({ count: 22, len: .16 * size, W: .045 * size, r0: .12 * size, y0: -.03, phC0: .4, phC1: .2, phO0: 1.6, phO1: 2.3,
+      cupC: .3, cupO: .3, wrap: 0, wk: .9, we: 1, veins: 1, gloss: .2, jit: .2 });
+  } else if (type === 'cosmos' || type === 'hibiscus') {
+    const h = type === 'hibiscus';
+    G.sepals = basePetal({ count: h ? 5 : 8, len: (h ? .2 : .1) * size, W: (h ? .05 : .025) * size, r0: .04, y0: -.02, phC0: .25, phC1: -.1,
+      phO0: h ? .5 : 1.4, phO1: h ? .7 : 2, cupC: .4, cupO: .4, wrap: .4, wk: .9, we: 1, veins: 1, gloss: .2 });
+  } else if (type === 'carnation') {
+    G.sepals = basePetal({ count: 5, len: .24 * size, W: .055 * size, r0: .035, y0: -.12 * size, phC0: .12, phC1: -.02,
+      phO0: .12, phO1: .05, cupC: .9, cupO: .9, wrap: .95, wk: .9, we: 1, veins: 3, gloss: .3 });
   } else if (type === 'daisy') {
     G.sepals = basePetal({ count: 16, len: .1 * size, W: .022 * size, r0: .05, y0: -.02, phC0: .3, phC1: .1, phO0: 1.5, phO1: 2.0,
       cupC: .2, cupO: .2, wrap: 0, wk: .9, we: 1, veins: 1, gloss: .2 });
   }
 
   // greens
-  const gh = type === 'lotus' ? R.range(140, 160) : (type === 'tulip' ? R.range(105, 125) : R.range(95, 135));
-  const gs = type === 'tulip' ? .55 : 1;
+  const gh = type === 'lotus' ? R.range(140, 160) : type === 'carnation' || type === 'iris' ? R.range(140, 165) : (type === 'tulip' ? R.range(105, 125) : R.range(95, 135));
+  const gs = type === 'tulip' || type === 'carnation' ? .55 : type === 'iris' ? .7 : type === 'poppy' ? .75 : 1;
   G.green = {
     dark: hsv(gh + 5, .85 * gs, .26), body: hsv(gh, .78 * gs, .68), light: hsv(gh - 12, .55 * gs, .95),
     stem: hsv(gh - 8, .72 * gs, .74), vein: hsv(gh - 15, .45 * gs, 1),
   };
+  if (type === 'magnolia' || (type === 'hibiscus' && R.chance(.6))) {
+    const bh = R.range(18, 30);
+    G.stemPal = { dark: hsv(bh, .6, .2), stem: hsv(bh, .45, .45), light: hsv(bh + 8, .3, .65) };
+  }
   G.sepalPal = { base: G.green.dark, body: G.green.body, tip: G.green.light, edge: G.green.light, edgeAmt: .2, edgeStart: .8, spot: G.green.dark };
 
   // head orientation and stem
-  const tiltRange = { rose: [.05, .35], tulip: [0, .2], lily: [.75, 1.15], daisy: [.75, 1.05], dahlia: [.45, .8], peony: [.2, .45], lotus: [.15, .4], anemone: [.6, .95] }[type];
+  const tiltRange = { rose: [.05, .35], tulip: [0, .2], lily: [.75, 1.15], daisy: [.75, 1.05], dahlia: [.45, .8], peony: [.2, .45], lotus: [.15, .4], anemone: [.6, .95],
+    sunflower: [.75, 1.05], cosmos: [.6, .95], hibiscus: [.55, .95], iris: [0, .15], poppy: [.3, .65], carnation: [.05, .3], magnolia: [.05, .3] }[type];
   G.head = { tilt: R.range(tiltRange[0], tiltRange[1]), az: R.range(-.7, .7), spin: R.range(0, TAU) };
   const H = R.range(1.35, 1.8) * (type === 'lotus' ? .9 : 1);
   const M0 = mmul(rotY(G.head.az), rotX(G.head.tilt));
   const up = mv(M0, [0, 1, 0]);
   const P3 = [R.range(-.28, .28), H, R.range(-.18, .12)];
   G.stem = {
-    H, thick: R.range(.85, 1.2) * (type === 'lotus' ? 1.3 : 1),
+    H, thick: R.range(.85, 1.2) * ({ lotus: 1.3, sunflower: 1.8, hibiscus: 1.25, magnolia: 1.35, carnation: .8, cosmos: .7 }[type] || 1),
     P0: [0, 0, 0], P1: [R.range(-.3, .3), H * R.range(.25, .45), R.range(-.2, .2)], P2: sub(P3, mul(up, H * R.range(.22, .36))), P3,
   };
   G.pivot = [P3[0] * .5, 0, P3[2] * .5];
@@ -266,12 +375,19 @@ function makeGenome(seed) {
     const n = R.int(4, 8);
     for (let i = 0; i < n; i++) G.thorns.push({ u: R.range(.1, .85), a: R.range(0, TAU), len: R.range(.04, .07) });
   }
+  if (type === 'sunflower' || type === 'poppy') { // fine hairs along the stem
+    const n = type === 'sunflower' ? 70 : 50;
+    for (let i = 0; i < n; i++) G.thorns.push({ u: R.range(.05, .97), a: R.range(0, TAU), len: R.range(.012, .025), col: mixc(G.green.light, [.8, .85, .75], .5) });
+  }
+  if (type === 'carnation') { // swollen nodes
+    G.nodes = [R.range(.22, .3), R.range(.5, .58), R.range(.76, .82)];
+  }
 
   // leaves
   const lv = [];
   const lsz = (type === 'lotus' || type === 'tulip') ? 1.1 : 1.3;
   const leaf = o => Object.assign({ u: .4, psi: 0, len: .5, W: .14, elev: 1.0, droop: .6, fold: .5, serr: 0, teeth: 10,
-    shape: 'ovate', pairs: 0, petiole: .08, gloss: .3, roll: R.range(.45, .95) * (R.chance(.5) ? 1 : -1) }, o, { len: (o.len || .5) * lsz, W: (o.W || .14) * lsz });
+    shape: 'ovate', pairs: 0, petiole: .08, gloss: .3, wave: R.range(0, .12), roll: R.range(.45, .95) * (R.chance(.5) ? 1 : -1) }, o, { len: (o.len || .5) * lsz, W: (o.W || .14) * lsz });
   let psi = R.range(0, TAU);
   if (type === 'rose' || type === 'dahlia' || type === 'peony') {
     const n = R.int(2, 3);
@@ -309,6 +425,48 @@ function makeGenome(seed) {
       lv.push(leaf({ u: R.range(.12, .3), psi, len: R.range(.5, .62) * size, W: R.range(.26, .32) * size, roll: R.range(-.35, .35),
         elev: R.range(1.35, 1.5), droop: R.range(.0, .15), fold: -.18, shape: 'round', petiole: R.range(.25, .4), gloss: .5 }));
     }
+  } else if (type === 'sunflower') {
+    const n = R.int(3, 5);
+    for (let i = 0; i < n; i++) {
+      psi += R.range(2.0, 3.2);
+      lv.push(leaf({ u: lerp(.15, .7, i / (n - 1)), psi, len: R.range(.32, .42) * size, W: R.range(.18, .23) * size,
+        elev: R.range(.9, 1.25), droop: R.range(.5, .9), fold: .25, serr: .12, teeth: R.int(12, 16), shape: 'heart', petiole: R.range(.12, .2), wave: .15 }));
+    }
+  } else if (type === 'cosmos') {
+    const n = R.int(2, 3);
+    for (let i = 0; i < n; i++) {
+      psi += R.range(2.2, 3.4);
+      lv.push(leaf({ u: R.range(.15, .6), psi, len: R.range(.14, .2) * size, W: R.range(.012, .018) * size, elev: R.range(.8, 1.1),
+        droop: .4, fold: .1, shape: 'grass', pairs: R.int(3, 4), petiole: R.range(.22, .32) * size, wave: 0 }));
+    }
+  } else if (type === 'hibiscus' || type === 'magnolia') {
+    const n = R.int(3, 4);
+    for (let i = 0; i < n; i++) {
+      psi += R.range(2.0, 3.4);
+      lv.push(leaf({ u: lerp(.2, .78, i / (n - 1)), psi, len: R.range(.26, .34) * size, W: R.range(.1, .14) * size,
+        elev: R.range(.8, 1.15), droop: R.range(.3, .6), fold: .3, serr: type === 'hibiscus' ? R.range(.12, .22) : 0, teeth: R.int(9, 13),
+        shape: 'ovate', petiole: R.range(.06, .12), gloss: .6 }));
+    }
+  } else if (type === 'iris') {
+    const n = R.int(3, 5);
+    for (let i = 0; i < n; i++) {
+      psi += R.range(1.6, 2.6);
+      lv.push(leaf({ u: R.range(.02, .08), psi, len: R.range(.85, 1.2) * size, W: R.range(.05, .07) * size,
+        elev: R.range(.1, .35), droop: R.range(.1, .35), fold: .15, shape: 'sword', petiole: 0, roll: R.range(1.2, 1.5), wave: 0 }));
+    }
+  } else if (type === 'poppy') {
+    const n = R.int(2, 3);
+    for (let i = 0; i < n; i++) {
+      psi += R.range(2.2, 3.4);
+      lv.push(leaf({ u: R.range(.05, .35), psi, len: R.range(.32, .42) * size, W: R.range(.09, .12) * size,
+        elev: R.range(.8, 1.1), droop: R.range(.5, .8), fold: .35, serr: R.range(.45, .6), teeth: R.int(4, 6), shape: 'lance', petiole: .05, wave: .1 }));
+    }
+  } else if (type === 'carnation') {
+    for (const u of G.nodes) {
+      const a = R.range(0, TAU);
+      for (const sg of [0, Math.PI]) lv.push(leaf({ u, psi: a + sg, len: R.range(.26, .36) * size, W: R.range(.025, .035) * size,
+        elev: R.range(.5, .8), droop: R.range(.6, 1.1), fold: .3, shape: 'grass', petiole: 0, wave: 0 }));
+    }
   } else { // anemone: a whorl of three just under the flower and one low leaf
     const u = R.range(.62, .74);
     for (let i = 0; i < 3; i++) {
@@ -328,7 +486,7 @@ function makeGenome(seed) {
 }
 
 // ============================================================ geometry buffer
-const STRIDE = 18, MAXP = 180000;
+const STRIDE = 18, MAXP = 320000;
 const BUF = new Float32Array(MAXP * STRIDE);
 let NP = 0, NMODEL = 0;
 function push(x, y, z, nx, ny, nz, r, g, b, tx, ty, tz, order, edge, kind, h, side, gloss) {
@@ -392,44 +550,79 @@ function emitCurve(fn, n, color, o0, o1, kind, id, gloss = .2) {
 
 // ---------------------------------------------------------------- petals
 const SR = new Float32Array(96), SY = new Float32Array(96), SPh = new Float32Array(96);
+// per-column scratch for the petal builder
+const CV = new Float32Array(64), CAV = new Float32Array(64), CNOTCH = new Float32Array(64), CFR = new Float32Array(64);
+const CRS = new Float32Array(64), CRC = new Float32Array(64), CVEIN = new Float32Array(64), CSTS = new Float32Array(64), CSTC = new Float32Array(64);
+const CBL = new Float32Array(64), CBR = new Float32Array(64), CCS = new Float32Array(64), CCC = new Float32Array(64);
 function emitPetal(P, open, theta, M, T, pal, orderBase, orderSpan, headH, id, dens, lenMul) {
   const len = P.len * lenMul, W = P.W * lenMul;
-  const nu = clamp(Math.ceil(len * dens * 1.25) + 4, 6, 64) | 0;
-  let nv = clamp(Math.ceil(2 * W * dens * 1.15) + 3, 5, 48) | 0; if (nv % 2 === 0) nv++;
+  const nu = clamp(Math.ceil(len * dens * 1.45) + 4, 6, 70) | 0;
+  let nv = clamp(Math.ceil(2 * W * dens * 1.35) + 3, 5, 51) | 0; if (nv % 2 === 0) nv++;
   const ds = len / (nu - 1);
   let r = P.r0, y = P.y0;
   for (let i = 0; i < nu; i++) {
     const u = i / (nu - 1);
-    const pc = lerp(P.phC0, P.phC1, u), po = lerp(P.phO0, P.phO1, u) + P.curl * sstep(.5, 1, u);
-    const ph = lerp(pc, po, open);
-    SR[i] = Math.max(r, .004); SY[i] = y; SPh[i] = ph;
+    const pc = P.phC0 + (P.phC1 - P.phC0) * u, po = P.phO0 + (P.phO1 - P.phO0) * u + P.curl * sstep(.5, 1, u);
+    const ph = pc + (po - pc) * open;
+    SR[i] = r > .004 ? r : .004; SY[i] = y; SPh[i] = ph;
     r += Math.sin(ph) * ds; y += Math.cos(ph) * ds;
   }
-  const cup = lerp(P.cupC, P.cupO, open), wrapK = P.wrap * (1 - open);
+  const cup = (P.cupC + (P.cupO - P.cupC) * open) * .9, wrapK = P.wrap * (1 - open);
   const ct = Math.cos(theta), st = Math.sin(theta);
+  if (P.pal) pal = P.pal;
   const { base, body, tip, edge, edgeAmt, edgeStart, spot } = pal;
+  const sph = hash1(id * 3 + 1) * 6;
+  const reshape = P.notch > 0 || P.fringe > 0;
+  const ruffleK = P.ruffle * W, crinkK = P.crinkle * W * .045;
+  const stripe = pal.stripe, blotch = P.blotch ? pal.blotch : null, beardC = P.beard ? P.beardC : null;
+  // everything that depends only on the column
+  for (let j = 0; j < nv; j++) {
+    const v = -1 + 2 * j / (nv - 1), av = v < 0 ? -v : v;
+    CV[j] = v; CAV[j] = av;
+    CNOTCH[j] = P.notch > 0 ? P.notch * Math.exp(-v * v * 8) : 0;
+    CFR[j] = P.fringe > 0 ? P.fringe * (.5 + .5 * Math.sin(v * P.fringeF + id)) : 0;
+    const a = v * P.rufF * Math.PI + id;
+    CRS[j] = Math.sin(a) * (.35 + .65 * av); CRC[j] = Math.cos(a) * (.35 + .65 * av);
+    CVEIN[j] = .5 + .5 * Math.cos(v * P.veins * Math.PI);
+    if (stripe) { const b = v * pal.stripeN * Math.PI + sph; CSTS[j] = Math.sin(b); CSTC[j] = Math.cos(b); }
+    if (blotch) { CBL[j] = P.blotchU * (1 + .25 * Math.sin(v * 5 + sph)); CBR[j] = Math.cos(v * 13 + sph) > .7 ? 1 : 0; }
+    if (crinkK) { CCS[j] = Math.sin(v * 7 + id); CCC[j] = Math.cos(v * 7 + id); }
+  }
   let m = 0;
   for (let i = 0; i < nu; i++) {
     const u = i / (nu - 1);
     const prof = Math.pow(Math.max(0, Math.sin(Math.PI * Math.pow(u, P.wk))), P.we);
     const hw = W * (0.07 + 0.93 * prof);
-    const t1 = sstep(0, .5, u), t2 = sstep(.5, 1, u) * .85, bd = .5 + .5 * sstep(0, .32, u);
+    const t1 = sstep(0, .5, u), t2 = sstep(.5, 1, u) * .85, bd = .5 + .5 * sstep(0, .32, u), vk = .1 * sstep(.05, .3, u);
+    const u4 = u * u * u * u, u6 = u4 * u * u, u15 = u * Math.sqrt(u);
+    const su = Math.sin(u * 4), cu = Math.cos(u * 4);
+    const rowR = ruffleK * u15;
+    const crA = crinkK ? crinkK * sstep(.1, .4, u) : 0;
+    const cs23 = Math.sin(u * 23), cc23 = Math.cos(u * 23), sst = stripe ? Math.sin(u * 2.5) : 0, cst = stripe ? Math.cos(u * 2.5) : 0;
+    // base color of this row, before per-column changes
+    let r0 = base[0] + (body[0] - base[0]) * t1, g0 = base[1] + (body[1] - base[1]) * t1, b0 = base[2] + (body[2] - base[2]) * t1;
+    r0 += (tip[0] - r0) * t2; g0 += (tip[1] - g0) * t2; b0 += (tip[2] - b0) * t2;
+    const orow = SR[i], yrow = SY[i], prow = SPh[i];
+    const nrRow = -Math.cos(prow), nyRow = Math.sin(prow);
     for (let j = 0; j < nv; j++, m++) {
-      const v = -1 + 2 * j / (nv - 1), av = Math.abs(v);
-      let ue = u;
-      if (P.notch > 0) ue -= P.notch * Math.exp(-v * v * 8) * Math.pow(u, 4);
-      if (P.fringe > 0) ue -= P.fringe * (.5 + .5 * Math.sin(v * P.fringeF + id)) * Math.pow(u, 6);
-      ue = clamp(ue);
-      const fi = ue * (nu - 1), i0 = Math.floor(fi), f = fi - i0, i1 = Math.min(i0 + 1, nu - 1);
-      const rad = lerp(SR[i0], SR[i1], f), yy = lerp(SY[i0], SY[i1], f), ph = lerp(SPh[i0], SPh[i1], f);
+      const v = CV[j], av = CAV[j];
+      let rad = orow, yy = yrow, nr = nrRow, nyy = nyRow;
+      if (reshape) {
+        let ue = u - CNOTCH[j] * u4 - CFR[j] * u6;
+        ue = ue < 0 ? 0 : ue > 1 ? 1 : ue;
+        const fi = ue * (nu - 1), i0 = fi | 0, f = fi - i0, i1 = i0 + 1 < nu ? i0 + 1 : nu - 1;
+        rad = SR[i0] + (SR[i1] - SR[i0]) * f; yy = SY[i0] + (SY[i1] - SY[i0]) * f;
+        const ph = SPh[i0] + (SPh[i1] - SPh[i0]) * f; nr = -Math.cos(ph); nyy = Math.sin(ph);
+      }
       const lat = v * hw;
       let Rr = rad, Tn = lat;
       if (wrapK > 0) {
-        const al = clamp(lat / Math.max(rad, .02), -2.8, 2.8);
-        Rr = lerp(rad, rad * Math.cos(al), wrapK); Tn = lerp(lat, rad * Math.sin(al), wrapK);
+        let al = lat / (rad > .02 ? rad : .02); al = al < -2.8 ? -2.8 : al > 2.8 ? 2.8 : al;
+        Rr = rad + (rad * Math.cos(al) - rad) * wrapK; Tn = lat + (rad * Math.sin(al) - lat) * wrapK;
       }
-      const off = cup * hw * v * v * .9 + P.ruffle * W * Math.sin(v * P.rufF * Math.PI + u * 4 + id) * Math.pow(u, 1.5) * (.35 + .65 * av);
-      const nr = -Math.cos(ph), nyy = Math.sin(ph);
+      // sin(a + 4u) by angle addition, so no trig per point
+      let off = cup * hw * v * v + rowR * (CRS[j] * cu + CRC[j] * su);
+      if (crA) off += crA * (CCS[j] * cc23 + CCC[j] * cs23) * Math.sin(v * 17 - u * 13 + sph);
       const Rl = Rr + nr * off, ly = yy + nyy * off;
       const lx = Rl * ct - Tn * st, lz = Rl * st + Tn * ct;
       const k = m * 3;
@@ -437,18 +630,32 @@ function emitPetal(P, open, theta, M, T, pal, orderBase, orderSpan, headH, id, d
       GP[k + 1] = M[3] * lx + M[4] * ly + M[5] * lz + T[1];
       GP[k + 2] = M[6] * lx + M[7] * ly + M[8] * lz + T[2];
       // color
-      let cr = lerp(base[0], body[0], t1), cg = lerp(base[1], body[1], t1), cb = lerp(base[2], body[2], t1);
-      cr = lerp(cr, tip[0], t2); cg = lerp(cg, tip[1], t2); cb = lerp(cb, tip[2], t2);
-      const e = sstep(edgeStart, 1, Math.max(u * .92, av)) * edgeAmt;
-      cr = lerp(cr, edge[0], e); cg = lerp(cg, edge[1], e); cb = lerp(cb, edge[2], e);
-      const vf = 1 - .1 * (.5 + .5 * Math.cos(v * P.veins * Math.PI)) * sstep(.05, .3, u);
-      let mm = vf * bd;
+      let cr = r0, cg = g0, cb = b0;
+      const ex = u * .92 > av ? u * .92 : av;
+      if (ex > edgeStart) {
+        const e = sstep(edgeStart, 1, ex) * edgeAmt;
+        cr += (edge[0] - cr) * e; cg += (edge[1] - cg) * e; cb += (edge[2] - cb) * e;
+      }
+      let mm = (1 - vk * CVEIN[j]) * bd;
       let kind = 0;
+      if (stripe && u > .12) {
+        const sv = .5 + .5 * (CSTS[j] * cst + CSTC[j] * sst);
+        if (sv > .82) { const k2 = sstep(.82, .95, sv) * .85; cr += (stripe[0] - cr) * k2; cg += (stripe[1] - cg) * k2; cb += (stripe[2] - cb) * k2; }
+      }
+      if (blotch) {
+        const bu = CBL[j];
+        let k2 = 1 - sstep(bu * .75, bu, u);
+        if (CBR[j] && u < bu * 1.7) k2 = Math.max(k2, .7 * (1 - u / (bu * 1.7)));
+        k2 *= P.blotch;
+        if (k2 > 0) { cr += (blotch[0] - cr) * k2; cg += (blotch[1] - cg) * k2; cb += (blotch[2] - cb) * k2; if (k2 > .4 && mm < .9) mm = .9; }
+      }
+      if (beardC && av < .13 && u > .06 && u < .48) { cr = beardC[0]; cg = beardC[1]; cb = beardC[2]; mm = 1; kind = 6; }
       if (P.spots && u > .12 && u < .62 && av < .75 && hash1(id * 131 + i * 977 + j * 31) < .09 * P.spots) {
         cr = spot[0]; cg = spot[1]; cb = spot[2]; mm = 1;
-      } else if (u > .35 && hash1(id * 53 + i * 613 + j * 7) < .0012) kind = 3; // dew drop
+      } else if (!kind && u > .35 && hash1(id * 53 + i * 613 + j * 7) < .0012) kind = 3; // dew drop
       GC[k] = cr * mm; GC[k + 1] = cg * mm; GC[k + 2] = cb * mm;
-      GO[m] = orderBase + orderSpan * clamp(ly / headH);
+      const oy = ly / headH;
+      GO[m] = orderBase + orderSpan * (oy < 0 ? 0 : oy > 1 ? 1 : oy);
       GK[m] = kind;
     }
   }
@@ -474,12 +681,13 @@ function stemFrame(S, u) {
 }
 
 function emitStem(G, st, dens, cellRatio) {
-  const S = G.stem, Rr = .03 * S.thick, gr = G.green;
+  const S = G.stem, Rr = .03 * S.thick, gr = G.stemPal || G.green;
   const nu = clamp(Math.ceil(S.H * dens / cellRatio * 1.6), 20, 220) | 0, nv = 12;
   let m = 0;
   for (let i = 0; i < nu; i++) {
     const u = i / (nu - 1), F = stemFrame(S, u);
-    const rr = Rr * (1.15 - .3 * u) * (1 + .9 * sstep(.95, 1, u));
+    let rr = Rr * (1.15 - .3 * u) * (1 + .9 * sstep(.95, 1, u));
+    if (G.nodes) for (const nu0 of G.nodes) rr *= 1 + .5 * Math.exp(-Math.pow((u - nu0) * 40, 2));
     const fade = .25 + .75 * sstep(0, .12, u);
     const c = mixc(mixc(gr.dark, gr.stem, sstep(0, .35, u)), gr.light, sstep(.75, 1, u) * .35);
     for (let j = 0; j < nv; j++, m++) {
@@ -497,17 +705,20 @@ function emitStem(G, st, dens, cellRatio) {
   for (const th of G.thorns) {
     const F = stemFrame(S, th.u), dir = norm(add(mul(F.n, Math.cos(th.a)), mul(F.b, Math.sin(th.a))));
     const base = add(F.p, mul(dir, Rr)), tipp = add(add(base, mul(dir, th.len)), mul(F.t, -th.len * .55));
-    emitCurve(s => add(base, mul(sub(tipp, base), s)), 5, [.45, .22, .12], th.u, th.u, 0, G.id + 991);
+    emitCurve(s => add(base, mul(sub(tipp, base), s)), th.col ? 2 : 5, th.col || [.45, .22, .12], th.u, th.u, 0, G.id + 991);
   }
 }
 
 // ---------------------------------------------------------------- leaves
 function leafProfile(shape, u) {
+  if (shape === 'heart') return Math.pow(Math.max(0, Math.sin(Math.PI * Math.pow(u, .55))), .6);
+  if (shape === 'sword') return Math.min(1, u * 10) * (u < .82 ? 1 - .25 * u : (1 - u) / .18 * .8);
+  if (shape === 'grass') return Math.min(1, u * 6) * (u < .7 ? 1 : (1 - u) / .3);
   if (shape === 'round') return Math.sqrt(Math.max(0, 1 - Math.pow(2 * u - 1, 2)));
   if (shape === 'lance') return Math.pow(Math.max(0, Math.sin(Math.PI * Math.pow(u, .7))), 1.2);
   return Math.pow(Math.max(0, Math.sin(Math.PI * Math.pow(u, .8))), .85);
 }
-function emitBlade(origin, dOut, len, W, elev, droop, fold, serr, teeth, shape, open, gr, orderBase, id, dens, time, gloss, roll) {
+function emitBlade(origin, dOut, len, W, elev, droop, fold, serr, teeth, shape, open, gr, orderBase, id, dens, time, gloss, roll, wave) {
   const cr = Math.cos(roll || 0), sr = Math.sin(roll || 0);
   const sc = lerp(.3, 1, open);
   len *= sc; W *= sc * lerp(.4, 1, open);
@@ -534,13 +745,15 @@ function emitBlade(origin, dOut, len, W, elev, droop, fold, serr, teeth, shape, 
     const c0 = mixc(gr.dark, gr.body, sstep(0, .4, u));
     for (let j = 0; j < nv; j++, m++) {
       const v = -1 + 2 * j / (nv - 1), av = Math.abs(v), k = m * 3;
-      const o = av * hw * fold * .6;
+      const o = av * hw * fold * .6 + (wave || 0) * hw * av * Math.sin(u * 16 + id + v * 2);
       GP[k] = p[0] + lt[0] * v * hw + nS[0] * o;
       GP[k + 1] = p[1] + lt[1] * v * hw + nS[1] * o;
       GP[k + 2] = p[2] + lt[2] * v * hw + nS[2] * o;
       let c = c0, f = 1;
-      if (av < .09) c = mixc(c0, gr.vein, .45);
-      else if (((u * 7 - av * .9) % 1 + 1) % 1 < .12 && u > .08) c = mixc(c0, gr.vein, .22);
+      if (av < .08) c = mixc(c0, gr.vein, .45);
+      else if (shape !== 'grass' && shape !== 'sword' && ((u * 8 - av * .9) % 1 + 1) % 1 < .11 && u > .06) c = mixc(c0, gr.vein, .25);
+      else if ((shape === 'grass' || shape === 'sword') && Math.abs(Math.sin(v * 9)) < .15) c = mixc(c0, gr.vein, .15);
+      if (av > .9) c = mixc(c, gr.light, .25);
       f *= .85 + .15 * (1 - av);
       GC[k] = c[0] * f; GC[k + 1] = c[1] * f; GC[k + 2] = c[2] * f;
       GO[m] = orderBase + u * .18; GK[m] = 0;
@@ -576,11 +789,11 @@ function emitLeaves(G, st, dens) {
         for (const sgn of [-1, 1]) {
           const a = L.psi + sgn * 1.05;
           emitBlade(pos, [Math.cos(a), 0, Math.sin(a)], L.len * .8, L.W * .8, L.elev + .25, L.droop, L.fold, L.serr, L.teeth, L.shape,
-            open, gr, L.u + .03, id + k * 97 + (sgn > 0 ? 50 : 0), dens, st.time, L.gloss, L.roll * .6);
+            open, gr, L.u + .03, id + k * 97 + (sgn > 0 ? 50 : 0), dens, st.time, L.gloss, L.roll * .6, L.wave);
         }
       }
     }
-    emitBlade(base, dOut, L.len, L.W, L.elev, L.droop, L.fold, L.serr, L.teeth, L.shape, open, gr, L.u + .03, id, dens, st.time, L.gloss, L.roll);
+    emitBlade(base, dOut, L.len, L.W, L.elev, L.droop, L.fold, L.serr, L.teeth, L.shape, open, gr, L.u + .03, id, dens, st.time, L.gloss, L.roll, L.wave);
   });
 }
 
@@ -610,7 +823,8 @@ function emitCenters(G, st, M, T, dens, open) {
       for (let k = 0; k < N; k++) {
         const s = Math.sqrt((k + .5) / N), rr = rp * s, a = k * GOLDEN, x = rr * Math.cos(a), z = rr * Math.sin(a);
         let isSeed = false;
-        for (const q of seeds) if (Math.hypot(x - q[0], z - q[1]) < rp * .11) isSeed = true;
+        if (C.rays) isSeed = s > .15 && Math.cos(a * 0 + Math.atan2(z, x) * C.rays) > .82;
+        else for (const q of seeds) if (Math.hypot(x - q[0], z - q[1]) < rp * .11) isSeed = true;
         const p = tx([x, C.y0 + hp, z]), n = mv(M, [0, 1, 0]), c = isSeed ? C.seed : C.c;
         push(p[0], p[1], p[2], n[0], n[1], n[2], c[0], c[1], c[2], 0, 0, 0, 1.35, 0, isSeed ? 1 : 0, hash1(id + k), 0, .3);
       }
@@ -622,6 +836,25 @@ function emitCenters(G, st, M, T, dens, open) {
         GC[k] = C.c[0] * .8; GC[k + 1] = C.c[1] * .8; GC[k + 2] = C.c[2] * .8; GO[m] = 1.33; GK[m] = 0;
       }
       emitGrid(nu, nv, { wrap: true, id: id + 5, gloss: .3 });
+    } else if (C.kind === 'column') {
+      const L = C.len * sc, bend = .25;
+      const fn = s => tx([Math.sin(s * bend) * L * .15, C.y0 + L * s, 0]);
+      const nseg = Math.max(4, Math.ceil(L * dens * 1.6));
+      emitCurve(fn, nseg, C.c, 1.3, 1.45, 0, id + 3);
+      const nn = mv(M, [0, 1, 0]);
+      for (let k = 0; k < 46; k++) { // pollen-laden anthers on short stalks along the top
+        const s = lerp(.5, .9, hash1(id + k * 11)), a = k * GOLDEN, p0 = fn(s);
+        const o = mv(M, [Math.cos(a) * .025 * sc, .004, Math.sin(a) * .025 * sc]);
+        push(p0[0] + o[0], p0[1] + o[1], p0[2] + o[2], nn[0], nn[1], nn[2], C.anth[0], C.anth[1], C.anth[2], 0, 0, 0, 1.45, 0, 2, hash1(id + k), 0, .3);
+      }
+      const e = fn(1);
+      for (let q = 0; q < 5; q++) { // five stigma pads
+        const a = q * TAU / 5;
+        for (let r = 0; r < 3; r++) {
+          const o = mv(M, [Math.cos(a) * .018 * (r + 1) * sc, .012 * r * sc, Math.sin(a) * .018 * (r + 1) * sc]);
+          push(e[0] + o[0], e[1] + o[1], e[2] + o[2], nn[0], nn[1], nn[2], C.stig[0], C.stig[1], C.stig[2], o[0], o[1], o[2], 1.45, r < 2 ? 1 : 0, r === 2 ? 2 : 0, hash1(id + q * 7 + r), 0, .3);
+        }
+      }
     } else if (C.kind === 'stamens' || C.kind === 'ring') {
       const ring = C.kind === 'ring';
       const n = C.n;
@@ -725,6 +958,7 @@ const RAMP = '.:-=+<>ivrtxzcjfunoaeQ0$8B%&#@';
 const DISK = 'o0@*Oo';
 const ANTH = '@0o';
 const STEMR = ':;!i1lj0O8%Q$8B';
+const BEARD = "\";:'^~,";
 const PITCH = .2;
 const SPARK = ['+', '+', '.', '·', "'", '+'];
 const FONT = 'ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace';
@@ -737,7 +971,7 @@ const view = { w: 0, h: 0, dpr: 1, cellW: 6, cellH: 10, cols: 0, rows: 0, font: 
 let zb, win, ghost;
 let G = null, sky = null;
 let T = +(params.get('t') || 0), paused = false, glowOn = params.get('glow') !== '0', hudOn = params.get('hud') !== '0';
-let yaw = 0, yawUser = 0, fade = 0, pending = null, skyLevel = 0;
+let yaw = 0, yawUser = 0, fade = 0, pending = null, skyLevel = 0, densScale = 1;
 let parts = [], falls = [], fallTimer = 3, letters = 0, fps = 60, fpsAcc = 0, fpsN = 0;
 const fit = { R: 1, ymin: 0, ymax: 3 };
 
@@ -751,7 +985,7 @@ function resize() {
   g1.width = Math.max(1, Math.round(w / 4)); g1.height = Math.max(1, Math.round(h / 4));
   g2.width = Math.max(1, Math.round(w / 12)); g2.height = Math.max(1, Math.round(h / 12));
   const portrait = h > w;
-  view.cellH = clamp(h / (portrait ? 118 : 92), 6.5, 15) / view.detail;
+  view.cellH = clamp(h / (portrait ? 130 : 102), 6, 15) / view.detail;
   view.cellW = view.cellH / 1.72;
   view.cols = Math.ceil(w / view.cellW); view.rows = Math.ceil(h / view.cellH);
   view.font = Math.min(view.cellW / .6, view.cellH * .95);
@@ -841,7 +1075,7 @@ function frame(now) {
   const st = { head, bloom, breathe, time: T, settle };
 
   // build geometry
-  const dens = view.S / view.cellW;
+  const dens = view.S / view.cellW * densScale;
   NP = 0;
   emitStem(G, st, dens, view.cellH / view.cellW);
   emitLeaves(G, st, dens);
@@ -874,6 +1108,10 @@ function frame(now) {
     emitFalling(f, G, dens);
   }
   falls = falls.filter(f => f.p[1] > fit.ymin - .4);
+  // keep the point count near the budget: dense flowers get thinner sampling, sparse ones full detail
+  const budget = 55000;
+  if (NP > budget) densScale = Math.max(.55, densScale * Math.sqrt(budget / NP) * .98 + densScale * .02);
+  else if (NP < budget * .7) densScale = Math.min(1, densScale * 1.02);
 
   // splat into the character grid
   const { cols, rows, cellW, cellH, S, cx, cy, yMid } = view;
@@ -919,8 +1157,9 @@ function frame(now) {
     if (model) { const a = nx, b = ny, c = nz; nx = V[0] * a + V[1] * b + V[2] * c; ny = V[3] * a + V[4] * b + V[5] * c; nz = V[6] * a + V[7] * b + V[8] * c; }
     const facing = nz >= 0 ? 1 : -1;
     if (nz < 0) { nx = -nx; ny = -ny; nz = -nz; }
-    const diff = Math.max(0, nx * LK[0] + ny * LK[1] + nz * LK[2]);
-    const lum = .2 + .8 * diff;
+    const dl = nx * LK[0] + ny * LK[1] + nz * LK[2], diff = Math.max(0, dl);
+    const trans = BUF[o + 16] !== 0 ? Math.max(0, -dl) * .3 : 0; // thin petals and leaves glow when backlit
+    const lum = .2 + .8 * diff + trans;
     const rim = Math.pow(1 - nz, 3) * .45;
     const spec = BUF[o + 17] * Math.pow(Math.max(0, nx * HK[0] + ny * HK[1] + nz * HK[2]), 24);
     let r = BUF[o + 6], g = BUF[o + 7], b = BUF[o + 8];
@@ -937,6 +1176,7 @@ function frame(now) {
       r = lerp(r, 1, .55 * tw); g = lerp(g, 1, .55 * tw); b = lerp(b, 1, .55 * tw); ch = '+';
     } else if (kind === 1) ch = DISK[(h * DISK.length) | 0];
     else if (kind === 2) ch = ANTH[(h * ANTH.length) | 0];
+    else if (kind === 6) ch = BEARD[(h * BEARD.length) | 0];
     else {
       let isStroke = false, tx = 0, ty = 0;
       if (BUF[o + 13] > 0) {
@@ -1188,5 +1428,5 @@ resize();
 setFlower(params.get('seed') || newSeed());
 setHud(hudOn);
 requestAnimationFrame(frame);
-window.__bloom = { regrow, get genome() { return G; }, setTime: t => { T = t; } };
+window.__bloom = { stats: () => ({ NP, letters, cols: view.cols, rows: view.rows }), regrow, get genome() { return G; }, setTime: t => { T = t; } };
 })();
