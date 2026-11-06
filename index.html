@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ascii bloom</title>
+<meta name="description" content="A generative ASCII flower that grows, blooms and turns under the stars. Every run is a new flower.">
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  body { font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace; color: #8b8b8b; }
+  canvas { display: block; touch-action: none; cursor: pointer; }
+  .hud { position: fixed; pointer-events: none; font-size: 11px; line-height: 1.55; letter-spacing: .02em; transition: opacity .4s; }
+  #tr { top: max(14px, env(safe-area-inset-top)); right: 16px; color: #c9c9c9; }
+  #tr span { color: #ff5a6e; }
+  #bl { left: 16px; bottom: calc(46px + env(safe-area-inset-bottom)); }
+  #bar { left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between; padding: 10px 16px calc(12px + env(safe-area-inset-bottom));
+         border-top: 1px solid #1c1c1c; background: linear-gradient(transparent, rgba(0,0,0,.6)); color: #a8a8a8; }
+  #hint { left: 0; right: 0; bottom: calc(118px + env(safe-area-inset-bottom)); text-align: center; color: #6f6f6f; transition: opacity 1.2s; }
+  #hint.gone { opacity: 0; }
+  body.nohud .hud { opacity: 0; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="hud" id="tr"><span id="t">&#9679; t 0.00s</span></div>
+<div class="hud" id="bl">
+  <div id="h1"></div>
+  <div id="h2"></div>
+  <div id="h3"></div>
+</div>
+<div class="hud" id="bar"><span id="cmd"></span><span id="fps"></span></div>
+<div class="hud" id="hint">tap for a new flower &middot; drag to turn</div>
+<script src="bloom.js"></script>
+</body>
+</html>
