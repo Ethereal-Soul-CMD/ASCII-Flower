@@ -662,7 +662,7 @@ function emitHead(G, st, dens) {
   if (st.head < 1.0) return;
   const M = headMatrix(G, st.time, st.settle), T = G.stem.P3;
   if (G.sepals) {
-    const P = G.sepals, open = easeInOut(clamp(st.bloom * 1.6));
+    const P = G.sepals, open = smooth(clamp(st.bloom * 1.6));
     for (let k = 0; k < P.count; k++) {
       const th = P.rot + k * TAU / P.count;
       emitPetal(P, open, th, M, T, G.sepalPal, 1.0, .08, G.headH, G.id * 31 + k * 211 + 5, dens, 1);
@@ -671,7 +671,7 @@ function emitHead(G, st, dens) {
   const grow = lerp(.6, 1, sstep(0, .65, st.bloom));
   G.layers.forEach((P, l) => {
     const o = clamp((st.bloom - P.delay) / (1 - P.delay));
-    const open0 = easeInOut(o) * P.openMax * st.breathe;
+    const open0 = (.5 * o + .5 * smooth(o)) * P.openMax * st.breathe;
     for (let k = 0; k < P.count; k++) {
       const hid = G.id * 1009 + l * 101 + k;
       const jt = (hash1(hid) - .5) * P.jit, jl = 1 + (hash1(hid + 9) - .5) * .12, jo = (hash1(hid + 17) - .5) * .14;
@@ -726,18 +726,18 @@ const DISK = 'o0@*Oo';
 const ANTH = '@0o';
 const STEMR = ':;!i1lj0O8%Q$8B';
 const PITCH = .2;
-const SPARK = ['+', '*', '.', '·', "'", '+'];
+const SPARK = ['+', '+', '.', '·', "'", '+'];
 const FONT = 'ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace';
 const D = 7;            // camera distance in world units
 const DRAW0 = .5, DRAW1 = 5.2, O_MAX = 1.56, GHOST = .3;
-const BLOOM0 = 5.3, TURN0 = 7;
+const BLOOM0 = 4.4, TURN0 = 6.5;
 
 const params = new URLSearchParams(location.search);
 const view = { w: 0, h: 0, dpr: 1, cellW: 6, cellH: 10, cols: 0, rows: 0, font: 10, detail: 1, S: 100, cx: 0, cy: 0, yMid: 1 };
 let zb, win, ghost;
 let G = null, sky = null;
 let T = +(params.get('t') || 0), paused = false, glowOn = params.get('glow') !== '0', hudOn = params.get('hud') !== '0';
-let yaw = 0, yawUser = 0, fade = 0, pending = null;
+let yaw = 0, yawUser = 0, fade = 0, pending = null, skyLevel = 0;
 let parts = [], falls = [], fallTimer = 3, letters = 0, fps = 60, fpsAcc = 0, fpsN = 0;
 const fit = { R: 1, ymin: 0, ymax: 3 };
 
@@ -829,7 +829,9 @@ function frame(now) {
 
   // timeline
   const head = O_MAX * clamp((T - DRAW0) / (DRAW1 - DRAW0)) + (T > DRAW1 ? 1 : 0);
-  const bloom = easeInOut((T - BLOOM0) / G.bloomDur);
+  const bx = clamp((T - BLOOM0) / G.bloomDur);
+  const bloom = 1 - Math.pow(1 - bx, 1.7);
+  skyLevel = sstep(0, .9, bloom);
   const bloomEnd = BLOOM0 + G.bloomDur;
   const settle = sstep(bloomEnd - 1, bloomEnd + 2, T);
   const breathe = 1 - .03 * (.5 + .5 * Math.sin(T * .8)) * settle;
@@ -932,7 +934,7 @@ function frame(now) {
     const fresh = head < 9 && head - ord < .035 && ord <= head;
     if (kind === 3) {
       const tw = .55 + .45 * Math.sin(T * 5 + h * 40);
-      r = lerp(r, 1, .55 * tw); g = lerp(g, 1, .55 * tw); b = lerp(b, 1, .55 * tw); ch = tw > .6 ? '*' : '+';
+      r = lerp(r, 1, .55 * tw); g = lerp(g, 1, .55 * tw); b = lerp(b, 1, .55 * tw); ch = '+';
     } else if (kind === 1) ch = DISK[(h * DISK.length) | 0];
     else if (kind === 2) ch = ANTH[(h * ANTH.length) | 0];
     else {
@@ -970,7 +972,7 @@ function frame(now) {
   const dpr = view.dpr;
   fctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   fctx.clearRect(0, 0, view.w, view.h);
-  const skyA = sstep(BLOOM0, BLOOM0 + 1.2, T) * alpha;
+  const skyA = skyLevel * alpha;
   drawSky(fctx, T, skyA, dt);
   fctx.globalAlpha = alpha;
   fctx.font = `${view.font.toFixed(2)}px ${FONT}`;
@@ -1032,18 +1034,18 @@ function drawSky(c, t, A, dt) {
     c.fillStyle = `rgb(${g},${g},255)`;
     if (s.k === 0) c.fillText('.', x, y + yo - cellH * .25);
     else if (s.k === 1) c.fillText('+', x, y + yo);
-    else { c.fillStyle = '#fff'; c.fillText(tw > .7 ? '*' : '+', x, y + yo); }
+    else { c.fillStyle = '#fff'; c.fillText('+', x, y + yo); }
   }
   // flare stars flash up around the plant and fade away
   if (!paused) {
     sky.nextFlare -= dt;
-    if (sky.nextFlare <= 0 && T > BLOOM0 + .3) {
-      sky.nextFlare = sky.R.range(.2, .7);
+    if (sky.nextFlare <= 0 && skyLevel > .05) {
+      sky.nextFlare = sky.R.range(.15, .5) / Math.max(.25, skyLevel);
       if (sky.flares.length < 5) {
         const top = project([G.pivot[0], fit.ymax, G.pivot[2]]), bot = project([G.pivot[0], fit.ymin, G.pivot[2]]);
         const rad = fit.R * view.S * 1.35;
         const x = view.cx + (sky.R.next() - .5) * 2 * rad, y = lerp(top[1] - cellH * 4, bot[1], sky.R.next());
-        sky.flares.push({ c: Math.floor(x / cellW), r: Math.floor(y / cellH), life: 0, max: sky.R.range(1.1, 2.3),
+        sky.flares.push({ c: Math.floor(x / cellW), r: Math.floor(y / cellH), life: 0, max: sky.R.range(.5, 1),
           L: sky.R.int(3, 6), D: sky.R.int(1, 3), H: sky.R.int(3, 5) });
       }
     }
@@ -1088,8 +1090,8 @@ function drawFlare(c, f, a) {
     flareChar(c, f.c + i, f.r, ch, fa);
   }
   // core
-  flareChar(c, f.c, f.r, a > .5 ? '*' : '+', Math.min(1, a * 1.5));
-  if (a > .5) flareChar(c, f.c, f.r, '+', a);
+  flareChar(c, f.c, f.r, '+', Math.min(1, a * 1.5));
+  flareChar(c, f.c, f.r, '+', a);
   c.globalAlpha = 1;
 }
 
@@ -1116,8 +1118,8 @@ function updateParticles(dt, head, bloom, st) {
   // diamond dust glitter around the plant
   const top = project([G.pivot[0], fit.ymax, G.pivot[2]]), bot = project([G.pivot[0], fit.ymin, G.pivot[2]]);
   const rad = fit.R * view.S * 1.15;
-  const rate = 7;
-  if (T > BLOOM0 && Math.random() < dt * rate) {
+  const rate = 7 * skyLevel;
+  if (Math.random() < dt * rate) {
     spawn(view.cx + (Math.random() - .5) * 2 * rad, lerp(top[1], bot[1], Math.random()), 0, -4, .5 + Math.random() * 1.2,
       Math.random() < .6 ? '+' : '.', [255, 255, 255], .9, 0);
   }
