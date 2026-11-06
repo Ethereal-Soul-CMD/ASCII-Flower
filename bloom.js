@@ -479,15 +479,15 @@ function makeGenome(seed) {
 }
 
 // ============================================================ geometry buffer
-const STRIDE = 18, MAXP = 320000;
+const STRIDE = 19, MAXP = 320000;
 const BUF = new Float32Array(MAXP * STRIDE);
 let NP = 0, NMODEL = 0;
-function push(x, y, z, nx, ny, nz, r, g, b, tx, ty, tz, order, edge, kind, h, side, gloss) {
+function push(x, y, z, nx, ny, nz, r, g, b, tx, ty, tz, order, edge, kind, h, side, gloss, pid) {
   if (NP >= MAXP) return;
   const o = NP * STRIDE;
   BUF[o] = x; BUF[o + 1] = y; BUF[o + 2] = z; BUF[o + 3] = nx; BUF[o + 4] = ny; BUF[o + 5] = nz;
   BUF[o + 6] = r; BUF[o + 7] = g; BUF[o + 8] = b; BUF[o + 9] = tx; BUF[o + 10] = ty; BUF[o + 11] = tz;
-  BUF[o + 12] = order; BUF[o + 13] = edge; BUF[o + 14] = kind; BUF[o + 15] = h; BUF[o + 16] = side; BUF[o + 17] = gloss;
+  BUF[o + 12] = order; BUF[o + 13] = edge; BUF[o + 14] = kind; BUF[o + 15] = h; BUF[o + 16] = side; BUF[o + 17] = gloss; BUF[o + 18] = pid || 0;
   NP++;
 }
 
@@ -527,7 +527,7 @@ function emitGrid(nu, nv, o) {
     const k = m * 3;
     const e = (GT[k] !== 0 || GT[k + 1] !== 0 || GT[k + 2] !== 0) ? 1 : 0;
     push(GP[k], GP[k + 1], GP[k + 2], GN[k], GN[k + 1], GN[k + 2], GC[k], GC[k + 1], GC[k + 2],
-      GT[k], GT[k + 1], GT[k + 2], GO[m], e, GK[m], hash1(o.id * 7919 + m), side, o.gloss);
+      GT[k], GT[k + 1], GT[k + 2], GO[m], e, GK[m], .5 + .5 * Math.sin(((m / nv) | 0) * .9 + o.id * .37) * Math.cos((m % nv) * 1.1 + o.id * .11), side, o.gloss, (o.id % 1000003) + 1);
   }
 }
 
@@ -549,8 +549,8 @@ const CRS = new Float32Array(80), CRC = new Float32Array(80), CVEIN = new Float3
 const CBL = new Float32Array(80), CBR = new Float32Array(80), CCS = new Float32Array(80), CCC = new Float32Array(80);
 function emitPetal(P, open, theta, M, T, pal, orderBase, orderSpan, headH, id, dens, lenMul) {
   const len = P.len * lenMul, W = P.W * lenMul;
-  const nu = clamp(Math.ceil(len * dens * 1.5) + 4, 6, 96) | 0;
-  let nv = clamp(Math.ceil(2 * W * dens * 1.4) + 3, 5, 71) | 0; if (nv % 2 === 0) nv++;
+  const nu = clamp(Math.ceil(P.len * 1.08 * dens * 1.5) + 4, 6, 96) | 0;
+  let nv = clamp(Math.ceil(2 * P.W * 1.08 * dens * 1.4) + 3, 5, 71) | 0; if (nv % 2 === 0) nv++;
   const ds = len / (nu - 1);
   let r = P.r0, y = P.y0;
   for (let i = 0; i < nu; i++) {
@@ -715,11 +715,11 @@ function leafProfile(shape, u) {
 }
 function emitBlade(origin, dOut, len, W, elev, droop, fold, serr, teeth, shape, open, gr, orderBase, id, dens, time, gloss, roll, wave) {
   const cr = Math.cos(roll || 0), sr = Math.sin(roll || 0);
+  const nu = clamp(Math.ceil(len * dens * 1.35) + 4, 6, 96) | 0;
+  let nv = clamp(Math.ceil(2 * W * dens * 1.25) + 3, 5, 71) | 0; if (nv % 2 === 0) nv++;
   const sc = lerp(.3, 1, open);
   len *= sc; W *= sc * lerp(.4, 1, open);
   fold = lerp(1.6, fold, open);
-  const nu = clamp(Math.ceil(len * dens * 1.35) + 4, 6, 96) | 0;
-  let nv = clamp(Math.ceil(2 * W * dens * 1.25) + 3, 5, 71) | 0; if (nv % 2 === 0) nv++;
   const up = [0, 1, 0], lat = norm([dOut[2], 0, -dOut[0]]);
   const ds = len / (nu - 1);
   let p = origin.slice(), m = 0;
@@ -949,10 +949,10 @@ const fg = document.createElement('canvas'), fctx = fg.getContext('2d');
 const g1 = document.createElement('canvas'), g1x = g1.getContext('2d');
 const g2 = document.createElement('canvas'), g2x = g2.getContext('2d');
 
-const RAMP = '.:-=+<>ivrtxzcjfunoaeQ0$8B%&#@';
+const RAMP = 'ivrtxzcjfunoaeQ0$8B%&#@';
 const DISK = 'o0@*Oo';
 const ANTH = '@0o';
-const STEMR = ':;!i1lj0O8%Q$8B';
+const STEMR = 'tfjuoa0OQ8%$B&';
 const BEARD = "\";:'^~,";
 const PITCH = .2;
 const CONTOUR = .07;
@@ -987,6 +987,8 @@ function resize() {
   view.font = Math.min(view.cellW / .6, view.cellH * .95);
   const n = view.cols * view.rows;
   zb = new Float32Array(n); win = new Int32Array(n); ghost = new Float32Array(n);
+  prevCls = new Int8Array(n); prevRi = new Int8Array(n); prevKind = new Int8Array(n); curCls = new Int8Array(n); curRi = new Int8Array(n); curKind = new Int8Array(n);
+  cellChar.length = 0; prevChar.length = 0;
   if (G) { sky = makeSky(G.skySeed); computeView(); }
 }
 
@@ -1018,7 +1020,7 @@ function setFlower(seed) {
   G = makeGenome(seed);
   computeFit(G); computeView();
   sky = makeSky(G.skySeed);
-  parts = []; falls = []; fallTimer = 3; yaw = 0; yawUser = 0;
+  parts = []; falls = []; fallTimer = 3; yaw = 0; yawUser = 0; densScale = 1;
   const url = new URL(location.href); url.searchParams.set('seed', seed); url.searchParams.delete('t');
   try { history.replaceState(null, '', url); } catch (e) { /* sandboxed */ }
   document.getElementById('name').textContent = G.name;
@@ -1044,7 +1046,9 @@ function colorStr(q) {
 
 const LK = norm([-.35, .85, .65]), HK = norm(add(LK, [0, 0, 1]));
 const buckets = new Map();
-const cellChar = [];
+const cellChar = [], prevChar = [];
+let prevCls = new Int8Array(0), prevRi = new Int8Array(0), prevKind = new Int8Array(0), curCls = new Int8Array(0), curRi = new Int8Array(0), curKind = new Int8Array(0);
+let flickN = 0, flickAvg = 0;
 
 function frame(now) {
   const dt = Math.min(.05, (now - (frame.last || now)) / 1000); frame.last = now;
@@ -1106,8 +1110,7 @@ function frame(now) {
   falls = falls.filter(f => f.p[1] > fit.ymin - .4);
   // keep the point count near the budget: dense flowers get thinner sampling, sparse ones full detail
   const budget = 90000;
-  if (NP > budget) densScale = Math.max(.7, densScale * Math.sqrt(budget / NP) * .98 + densScale * .02);
-  else if (NP < budget * .7) densScale = Math.min(1, densScale * 1.02);
+  if (NP > budget * 1.1 && densScale > .7) densScale = Math.max(.7, Math.floor(densScale * Math.sqrt(budget / NP) * 20) / 20);
 
   // splat into the character grid
   const { cols, rows, cellW, cellH, S, cx, cy, yMid } = view;
@@ -1154,7 +1157,10 @@ function frame(now) {
 
   // shade cells and choose glyphs
   buckets.clear();
-  letters = 0;
+  letters = 0; flickN = 0;
+  if (prevChar.length !== cellChar.length) prevChar.length = cellChar.length;
+  for (let i = 0; i < cellChar.length; i++) prevChar[i] = cellChar[i];
+  { const t = prevCls; prevCls = curCls; curCls = t; const t2 = prevRi; prevRi = curRi; curRi = t2; const t3 = prevKind; prevKind = curKind; curKind = t3; curCls.fill(0); }
   const zr = fit.R + .2;
   for (let idx = 0, n = cols * rows; idx < n; idx++) {
     const p = win[idx];
@@ -1184,53 +1190,67 @@ function frame(now) {
     // look at the neighbours in the depth buffer
     const cc0 = idx % cols, z0 = zb[idx];
     let ao = 1, gx = 0, gy = 0;
+    const CT = prevCls[idx] === 2 ? CONTOUR * .8 : CONTOUR * 1.15;
     if (BUF[o + 14] !== 5) {
-      const nL = cc0 > 0 && win[idx - 1] >= 0 ? zb[idx - 1] : null, nR = cc0 < cols - 1 && win[idx + 1] >= 0 ? zb[idx + 1] : null;
-      const nU = idx >= cols && win[idx - cols] >= 0 ? zb[idx - cols] : null, nD = idx + cols < cols * rows && win[idx + cols] >= 0 ? zb[idx + cols] : null;
+      const pid0 = BUF[o + 18];
+      const other = j => win[j] >= 0 && BUF[win[j] * STRIDE + 18] !== pid0 ? zb[j] : null;
+      const nL = cc0 > 0 ? other(idx - 1) : null, nR = cc0 < cols - 1 ? other(idx + 1) : null;
+      const nU = idx >= cols ? other(idx - cols) : null, nD = idx + cols < cols * rows ? other(idx + cols) : null;
       for (const nzv of [nL, nR, nU, nD]) if (nzv !== null && nzv > z0 + .05) ao *= .84; // tucked under a nearer petal
-      if (nL !== null && nL < z0 - CONTOUR) gx -= 1; if (nR !== null && nR < z0 - CONTOUR) gx += 1;
-      if (nU !== null && nU < z0 - CONTOUR) gy -= 1; if (nD !== null && nD < z0 - CONTOUR) gy += 1;
+      if (nL !== null && nL < z0 - CT) gx -= 1; if (nR !== null && nR < z0 - CT) gx += 1;
+      if (nU !== null && nU < z0 - CT) gy -= 1; if (nD !== null && nD < z0 - CT) gy += 1;
     }
     const k = (.36 + 1.0 * lum) * depth * ao;
     r = r * k + r * rim * .6 + spec; g = g * k + g * rim * .6 + spec; b = b * k + b * rim * .6 + spec;
     const h = BUF[o + 15], kind = BUF[o + 14], ord = BUF[o + 12];
     let ch;
     const fresh = head < 9 && head - ord < .035 && ord <= head;
+    const pcl = prevCls[idx], pch = prevChar[idx];
+    let cls = 3;
     if (kind === 3) {
       const tw = .55 + .45 * Math.sin(T * 5 + h * 40);
       r = lerp(r, 1, .55 * tw); g = lerp(g, 1, .55 * tw); b = lerp(b, 1, .55 * tw); ch = '+';
-    } else if (kind === 1) ch = DISK[(h * DISK.length) | 0];
-    else if (kind === 2) ch = ANTH[(h * ANTH.length) | 0];
-    else if (kind === 6) ch = BEARD[(h * BEARD.length) | 0];
-    else {
+    } else if (kind === 1 || kind === 2 || kind === 6) {
+      if (pcl === 3 && prevKind[idx] === kind) ch = pch;
+      else ch = kind === 1 ? DISK[(h * DISK.length) | 0] : kind === 2 ? ANTH[(h * ANTH.length) | 0] : BEARD[(h * BEARD.length) | 0];
+    } else {
+      const was = pcl === 2;
       let isStroke = false, tx = 0, ty = 0;
       if (BUF[o + 13] > 0) {
         const a = BUF[o + 9], bb = BUF[o + 10], c = BUF[o + 11];
         if (model) { tx = V[0] * a + V[1] * bb + V[2] * c; ty = V[3] * a + V[4] * bb + V[5] * c; } else { tx = a; ty = bb; }
         isStroke = true;
-      } else if (nz < (kind === 5 ? .5 : .24)) { tx = -ny; ty = nx; isStroke = true; }
+      } else if (nz < (kind === 5 ? (was ? .55 : .45) : (was ? .28 : .2))) { tx = -ny; ty = nx; isStroke = true; }
       else if (gx !== 0 || gy !== 0) { tx = -gy; ty = -gx; isStroke = true; } // this petal overlaps one behind it
       if (isStroke) {
-        const dx = tx, dy = -ty, ang = Math.atan2(Math.abs(dy) * 1.0, Math.abs(dx) * 1.0);
+        cls = 2;
+        const dx = tx, dy = -ty, ang = Math.atan2(Math.abs(dy), Math.abs(dx));
         if (ang < .42) ch = (idx + cols < cols * rows && win[idx + cols] < 0) ? '_' : '-';
         else if (ang > 1.2) ch = '|';
         else ch = dx * dy < 0 ? '/' : '\\';
+        // near a bin edge, keep last frame's stroke so it does not flutter
+        if (was && ch !== pch && (Math.abs(ang - .42) < .12 || Math.abs(ang - 1.2) < .12)) ch = pch;
         r *= 1.08; g *= 1.08; b *= 1.08;
-      } else if (kind === 5) {
-        const lv = clamp(lum * .95 + spec * .5 + (h - .5) * .1);
-        ch = STEMR[(lv * (STEMR.length - 1)) | 0];
       } else {
-        const lv = clamp(lum * .9 + spec * .6 + (h - .5) * .26);
-        ch = RAMP[(lv * (RAMP.length - 1)) | 0];
+        cls = 1;
+        const ramp = kind === 5 ? STEMR : RAMP;
+        const lv = clamp(kind === 5 ? lum * .95 + spec * .5 + (h - .5) * .08 : lum * .9 + spec * .6 + (h - .5) * .14);
+        let ri = Math.round(lv * (ramp.length - 1));
+        if (pcl === 1 && prevKind[idx] === kind && Math.abs(ri - prevRi[idx]) <= 1) ri = prevRi[idx];
+        curRi[idx] = ri;
+        ch = ramp[ri];
       }
     }
+    curCls[idx] = cls; curKind[idx] = kind;
     if (fresh) { r = lerp(r, 1, .65); g = lerp(g, 1, .65); b = lerp(b, 1, .65); ch = RAMP[(Math.random() * RAMP.length) | 0]; }
     r = clamp(r); g = clamp(g); b = clamp(b);
+    if (prevChar[idx] !== ch) flickN++;
     cellChar[idx] = ch;
     addBucket((Math.round(r * 31) << 10) | (Math.round(g * 31) << 5) | Math.round(b * 31), idx);
     letters++;
   }
 
+  flickAvg = flickAvg * .9 + .1 * (letters ? flickN / letters : 0);
   // particles
   updateParticles(dt, head, bloom, st);
 
@@ -1454,5 +1474,5 @@ resize();
 setFlower(params.get('seed') || newSeed());
 setHud(hudOn);
 requestAnimationFrame(frame);
-window.__bloom = { stats: () => ({ NP, letters, cols: view.cols, rows: view.rows }), regrow, get genome() { return G; }, setTime: t => { T = t; } };
+window.__bloom = { stats: () => ({ NP, letters, cols: view.cols, rows: view.rows, flick: flickAvg, densScale }), regrow, get genome() { return G; }, setTime: t => { T = t; } };
 })();
