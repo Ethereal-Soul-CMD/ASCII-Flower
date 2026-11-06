@@ -1207,12 +1207,14 @@ function frame(now) {
         if (model) { tx = V[0] * a + V[1] * bb + V[2] * c; ty = V[3] * a + V[4] * bb + V[5] * c; } else { tx = a; ty = bb; }
         isStroke = true;
       } else if (nz < (kind === 5 ? (was ? .55 : .45) : (was ? .28 : .2))) { tx = -ny; ty = nx; isStroke = true; }
-      // strokes only on the outer outline, where the flower meets the sky; inside, surfaces stay solid letters
+      // outer outline: any stroke. inside the flower: diagonal and vertical strokes keep edges crisp,
+      // but a horizontal rim becomes a bright line of dense letters instead of a row of dashes
+      let rim = false;
       if (isStroke) {
         const c0 = idx % cols;
         const open = (c0 > 0 && win[idx - 1] < 0) || (c0 < cols - 1 && win[idx + 1] < 0) ||
           (idx >= cols && win[idx - cols] < 0) || (idx + cols < cols * rows && win[idx + cols] < 0);
-        if (!open) isStroke = false;
+        if (!open && Math.atan2(Math.abs(ty), Math.abs(tx)) < .45) { isStroke = false; rim = true; }
       }
       if (isStroke) {
         cls = 2;
@@ -1228,6 +1230,7 @@ function frame(now) {
         const ramp = kind === 5 ? STEMR : RAMP;
         const lv = clamp(kind === 5 ? lum * .95 + spec * .5 + (h - .5) * .08 : lum * .9 + spec * .6 + (h - .5) * .14);
         let ri = Math.round(lv * (ramp.length - 1));
+        if (rim) { ri = Math.max(ri, Math.round((ramp.length - 1) * .72)); r *= 1.22; g *= 1.22; b *= 1.22; }
         if (pcl === 1 && prevKind[idx] === kind && Math.abs(ri - prevRi[idx]) <= 1) ri = prevRi[idx];
         curRi[idx] = ri;
         ch = ramp[ri];
