@@ -949,10 +949,10 @@ const fg = document.createElement('canvas'), fctx = fg.getContext('2d');
 const g1 = document.createElement('canvas'), g1x = g1.getContext('2d');
 const g2 = document.createElement('canvas'), g2x = g2.getContext('2d');
 
-const RAMP = 'ivrtxzcjfunoaeQ0$8B%&#@';
-const DISK = 'o0@*Oo';
+const RAMP = 'tfjkhdbYVXZCUSOQ0G$8B%&#@';
+const DISK = '0@O%Q0';
 const ANTH = '@0o';
-const STEMR = 'tfjuoa0OQ8%$B&';
+const STEMR = 'tfkhdUO0Q8%$B&';
 const BEARD = "\";:'^~,";
 const PITCH = .2;
 const CONTOUR = .07;
@@ -984,7 +984,7 @@ function resize() {
   view.cellH = clamp(h / (portrait ? 165 : 128), 4.6, 13) / view.detail;
   view.cellW = view.cellH / 1.72;
   view.cols = Math.ceil(w / view.cellW); view.rows = Math.ceil(h / view.cellH);
-  view.font = Math.min(view.cellW / .6, view.cellH * .95);
+  view.font = Math.min(view.cellW / .58, view.cellH * 1.0);
   const n = view.cols * view.rows;
   zb = new Float32Array(n); win = new Int32Array(n); ghost = new Float32Array(n);
   prevCls = new Int8Array(n); prevRi = new Int8Array(n); prevKind = new Int8Array(n); curCls = new Int8Array(n); curRi = new Int8Array(n); curKind = new Int8Array(n);
@@ -1261,7 +1261,7 @@ function frame(now) {
   const skyA = skyLevel * alpha;
   drawSky(fctx, T, skyA, dt);
   fctx.globalAlpha = alpha;
-  fctx.font = `${view.font.toFixed(2)}px ${FONT}`;
+  fctx.font = `700 ${view.font.toFixed(2)}px ${FONT}`;
   fctx.textBaseline = 'top';
   const yo = (cellH - view.font) * .5;
   for (const [q, list] of buckets) {
