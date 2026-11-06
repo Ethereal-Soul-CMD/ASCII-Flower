@@ -949,10 +949,10 @@ const fg = document.createElement('canvas'), fctx = fg.getContext('2d');
 const g1 = document.createElement('canvas'), g1x = g1.getContext('2d');
 const g2 = document.createElement('canvas'), g2x = g2.getContext('2d');
 
-const RAMP = '.:-=+<>ivrtxzcjfunoaeQ0$8B%&#@';
+const RAMP = 'ivrtxzcjfunoaeQ0$8B%&#@';
 const DISK = 'o0@*Oo';
 const ANTH = '@0o';
-const STEMR = ':;!i1lj0O8%Q$8B';
+const STEMR = 'ijl10O8%Q$8B';
 const BEARD = "\";:'^~,";
 const PITCH = .2;
 const SPARK = ['+', '+', '.', '·', "'", '+'];
@@ -1207,6 +1207,13 @@ function frame(now) {
         if (model) { tx = V[0] * a + V[1] * bb + V[2] * c; ty = V[3] * a + V[4] * bb + V[5] * c; } else { tx = a; ty = bb; }
         isStroke = true;
       } else if (nz < (kind === 5 ? (was ? .55 : .45) : (was ? .28 : .2))) { tx = -ny; ty = nx; isStroke = true; }
+      // strokes only on the outer outline, where the flower meets the sky; inside, surfaces stay solid letters
+      if (isStroke) {
+        const c0 = idx % cols;
+        const open = (c0 > 0 && win[idx - 1] < 0) || (c0 < cols - 1 && win[idx + 1] < 0) ||
+          (idx >= cols && win[idx - cols] < 0) || (idx + cols < cols * rows && win[idx + cols] < 0);
+        if (!open) isStroke = false;
+      }
       if (isStroke) {
         cls = 2;
         const dx = tx, dy = -ty, ang = Math.atan2(Math.abs(dy), Math.abs(dx));
