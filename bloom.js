@@ -955,7 +955,6 @@ const ANTH = '@0o';
 const STEMR = ':;!i1lj0O8%Q$8B';
 const BEARD = "\";:'^~,";
 const PITCH = .2;
-const CONTOUR = .07;
 const SPARK = ['+', '+', '.', '·', "'", '+'];
 const FONT = 'ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace';
 const D = 7;            // camera distance in world units
@@ -1187,20 +1186,7 @@ function frame(now) {
     const side = BUF[o + 16];
     if (side !== 0 && side * facing < 0) { r *= .78; g *= .78; b *= .8; }
     const depth = .72 + .28 * clamp((zb[idx] + zr) / (2 * zr));
-    // look at the neighbours in the depth buffer
-    const cc0 = idx % cols, z0 = zb[idx];
-    let ao = 1, gx = 0, gy = 0;
-    const CT = prevCls[idx] === 2 ? CONTOUR * .8 : CONTOUR * 1.15;
-    if (BUF[o + 14] !== 5) {
-      const pid0 = BUF[o + 18];
-      const other = j => win[j] >= 0 && BUF[win[j] * STRIDE + 18] !== pid0 ? zb[j] : null;
-      const nL = cc0 > 0 ? other(idx - 1) : null, nR = cc0 < cols - 1 ? other(idx + 1) : null;
-      const nU = idx >= cols ? other(idx - cols) : null, nD = idx + cols < cols * rows ? other(idx + cols) : null;
-      for (const nzv of [nL, nR, nU, nD]) if (nzv !== null && nzv > z0 + .05) ao *= .84; // tucked under a nearer petal
-      if (nL !== null && nL < z0 - CT) gx -= 1; if (nR !== null && nR < z0 - CT) gx += 1;
-      if (nU !== null && nU < z0 - CT) gy -= 1; if (nD !== null && nD < z0 - CT) gy += 1;
-    }
-    const k = (.36 + 1.0 * lum) * depth * ao;
+    const k = (.36 + 1.0 * lum) * depth;
     r = r * k + r * rim * .6 + spec; g = g * k + g * rim * .6 + spec; b = b * k + b * rim * .6 + spec;
     const h = BUF[o + 15], kind = BUF[o + 14], ord = BUF[o + 12];
     let ch;
@@ -1221,7 +1207,6 @@ function frame(now) {
         if (model) { tx = V[0] * a + V[1] * bb + V[2] * c; ty = V[3] * a + V[4] * bb + V[5] * c; } else { tx = a; ty = bb; }
         isStroke = true;
       } else if (nz < (kind === 5 ? (was ? .55 : .45) : (was ? .28 : .2))) { tx = -ny; ty = nx; isStroke = true; }
-      else if (gx !== 0 || gy !== 0) { tx = -gy; ty = -gx; isStroke = true; } // this petal overlaps one behind it
       if (isStroke) {
         cls = 2;
         const dx = tx, dy = -ty, ang = Math.atan2(Math.abs(dy), Math.abs(dx));
