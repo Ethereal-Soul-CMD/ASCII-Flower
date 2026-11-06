@@ -320,7 +320,7 @@ function makeGenome(seed) {
   }
   G.leaves = lv;
 
-  G.bloomDur = R.range(7.5, 10);
+  G.bloomDur = R.range(7.5, 10) / 1.1;
   G.skySeed = R.int(0, 1e9);
   G.id = xmur3(String(seed)) & 0xffff;
   G.name = `${fam === 'stargazer' ? 'stargazer' : fam} ${type}`;
@@ -698,8 +698,8 @@ function makeSky(seed) {
   const put = (c, r, k) => {
     if (c < 0 || r < 0 || c >= cols || r >= rows) return;
     const id = r * cols + c; if (used.has(id)) return; used.add(id);
-    stars.push({ c, r, k, a: k === 0 ? R.range(.12, .32) : k === 1 ? R.range(.35, .75) : R.range(.75, 1),
-      sp: R.range(.5, 2.6), ph: R.range(0, TAU), cool: R.range(0, 1) });
+    stars.push({ c, r, k, a: k === 0 ? R.range(.18, .4) : k === 1 ? R.range(.5, .9) : 1,
+      sp: R.range(.9, 4.2), ph: R.range(0, TAU), cool: R.range(0, 1) });
   };
   const nFaint = Math.round(n * .011), nPlus = Math.round(n * .0055), nBright = Math.round(n * .0022);
   for (let i = 0; i < nFaint; i++) put(R.int(0, cols - 1), R.int(0, rows - 1), 0);
@@ -970,7 +970,7 @@ function frame(now) {
   const dpr = view.dpr;
   fctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   fctx.clearRect(0, 0, view.w, view.h);
-  const skyA = sstep(0, 1.4, T) * alpha;
+  const skyA = sstep(BLOOM0, BLOOM0 + 1.2, T) * alpha;
   drawSky(fctx, T, skyA, dt);
   fctx.globalAlpha = alpha;
   fctx.font = `${view.font.toFixed(2)}px ${FONT}`;
@@ -1016,11 +1016,6 @@ function cellFree(c, r) {
   if (c < 0 || r < 0 || c >= view.cols || r >= view.rows) return false;
   return win[r * view.cols + c] < 0;
 }
-function glow(c, x, y, rad, a) {
-  const rg = c.createRadialGradient(x, y, 0, x, y, rad);
-  rg.addColorStop(0, 'rgba(255,255,255,1)'); rg.addColorStop(.3, 'rgba(255,255,255,.55)'); rg.addColorStop(1, 'rgba(255,255,255,0)');
-  c.globalAlpha = a; c.fillStyle = rg; c.fillRect(x - rad, y - rad, rad * 2, rad * 2);
-}
 function drawSky(c, t, A, dt) {
   if (A <= 0) return;
   const { cellW, cellH, font } = view, yo = (cellH - font) * .5;
@@ -1036,20 +1031,20 @@ function drawSky(c, t, A, dt) {
     c.globalAlpha = a;
     c.fillStyle = `rgb(${g},${g},255)`;
     if (s.k === 0) c.fillText('.', x, y + yo - cellH * .25);
-    else c.fillText('+', x, y + yo);
-    if (s.k === 2) glow(c, x + cellW * .5, y + cellH * .5, cellW * .6, a * .8);
+    else if (s.k === 1) c.fillText('+', x, y + yo);
+    else { c.fillStyle = '#fff'; c.fillText(tw > .7 ? '*' : '+', x, y + yo); }
   }
   // flare stars flash up around the plant and fade away
   if (!paused) {
     sky.nextFlare -= dt;
-    if (sky.nextFlare <= 0 && T > .6) {
-      sky.nextFlare = sky.R.range(.25, .9);
+    if (sky.nextFlare <= 0 && T > BLOOM0 + .3) {
+      sky.nextFlare = sky.R.range(.2, .7);
       if (sky.flares.length < 5) {
         const top = project([G.pivot[0], fit.ymax, G.pivot[2]]), bot = project([G.pivot[0], fit.ymin, G.pivot[2]]);
         const rad = fit.R * view.S * 1.35;
         const x = view.cx + (sky.R.next() - .5) * 2 * rad, y = lerp(top[1] - cellH * 4, bot[1], sky.R.next());
-        sky.flares.push({ c: Math.floor(x / cellW), r: Math.floor(y / cellH), life: 0, max: sky.R.range(1.6, 3.2),
-          L: sky.R.range(3.5, 6.5), D: sky.R.range(1.6, 2.6), H: sky.R.int(3, 5) });
+        sky.flares.push({ c: Math.floor(x / cellW), r: Math.floor(y / cellH), life: 0, max: sky.R.range(1.1, 2.3),
+          L: sky.R.int(3, 6), D: sky.R.int(1, 3), H: sky.R.int(3, 5) });
       }
     }
     for (const f of sky.flares) f.life += dt;
@@ -1057,41 +1052,44 @@ function drawSky(c, t, A, dt) {
   }
   for (const f of sky.flares) {
     const k = f.life / f.max;
-    drawFlare(c, f, A * Math.pow(Math.sin(Math.PI * k), 1.4));
+    drawFlare(c, f, A * Math.pow(Math.sin(Math.PI * k), .6));
   }
   c.globalAlpha = 1;
 }
-function ray(c, x0, y0, x1, y1, a) {
-  const g = c.createLinearGradient(x0, y0, x1, y1);
-  g.addColorStop(0, 'rgba(255,255,255,0)');
-  g.addColorStop(.5, `rgba(255,255,255,${a.toFixed(3)})`);
-  g.addColorStop(1, 'rgba(255,255,255,0)');
-  c.strokeStyle = g;
-  c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke();
+function flareChar(c, cc, rr, ch, a) {
+  if (a < .03 || !cellFree(cc, rr)) return;
+  const { cellW, cellH, font } = view;
+  c.globalAlpha = a;
+  c.fillText(ch, cc * cellW, rr * cellH + (cellH - font) * .5);
 }
 function drawFlare(c, f, a) {
   if (a < .02) return;
-  const { cellW, cellH, font } = view, yo = (cellH - font) * .5;
-  const x = (f.c + .5) * cellW, y = (f.r + .5) * cellH;
-  const L = f.L * cellH, d = f.D * cellH;
-  c.globalAlpha = 1; c.lineWidth = 1;
-  ray(c, x, y - L, x, y + L, a);
-  ray(c, x - d * .55, y - d, x + d * .55, y + d, a * .7);
-  ray(c, x + d * .55, y - d, x - d * .55, y + d, a * .7);
-  // dashed horizontal arm made of grid characters
   c.fillStyle = '#fff';
-  for (let i = 1; i <= f.H * 2; i += 2) {
-    const fa = a * Math.pow(1 - i / (f.H * 2 + 1), 1.2) * .85;
-    for (const sg of [-1, 1]) {
-      const cc = f.c + sg * i;
-      if (!cellFree(cc, f.r)) continue;
-      c.globalAlpha = fa;
-      c.fillText(i >= f.H * 2 - 1 ? '.' : '-', cc * cellW, f.r * cellH + yo);
-    }
+  // vertical ray
+  for (let i = 1; i <= f.L; i++) {
+    const fa = a * Math.pow(1 - i / (f.L + 1), .7);
+    const ch = i > f.L - 1 ? '.' : (i > f.L * .6 ? ':' : '|');
+    flareChar(c, f.c, f.r - i, ch, fa);
+    flareChar(c, f.c, f.r + i, ch, fa);
   }
-  c.globalAlpha = a; c.fillStyle = '#fff';
-  c.fillText('+', f.c * cellW, f.r * cellH + yo);
-  glow(c, x, y, cellW * .9, a);
+  // diagonal rays
+  for (let i = 1; i <= f.D; i++) {
+    const fa = a * .9 * Math.pow(1 - i / (f.D + 1), .7);
+    flareChar(c, f.c - i, f.r - i, '\\', fa);
+    flareChar(c, f.c + i, f.r + i, '\\', fa);
+    flareChar(c, f.c + i, f.r - i, '/', fa);
+    flareChar(c, f.c - i, f.r + i, '/', fa);
+  }
+  // dashed horizontal arm
+  for (let i = 1; i <= f.H * 2; i += 2) {
+    const fa = a * .9 * Math.pow(1 - i / (f.H * 2 + 1), .8);
+    const ch = i >= f.H * 2 - 1 ? '.' : '-';
+    flareChar(c, f.c - i, f.r, ch, fa);
+    flareChar(c, f.c + i, f.r, ch, fa);
+  }
+  // core
+  flareChar(c, f.c, f.r, a > .5 ? '*' : '+', Math.min(1, a * 1.5));
+  if (a > .5) flareChar(c, f.c, f.r, '+', a);
   c.globalAlpha = 1;
 }
 
@@ -1118,8 +1116,8 @@ function updateParticles(dt, head, bloom, st) {
   // diamond dust glitter around the plant
   const top = project([G.pivot[0], fit.ymax, G.pivot[2]]), bot = project([G.pivot[0], fit.ymin, G.pivot[2]]);
   const rad = fit.R * view.S * 1.15;
-  const rate = T < DRAW1 ? 10 : 6;
-  if (Math.random() < dt * rate) {
+  const rate = 7;
+  if (T > BLOOM0 && Math.random() < dt * rate) {
     spawn(view.cx + (Math.random() - .5) * 2 * rad, lerp(top[1], bot[1], Math.random()), 0, -4, .5 + Math.random() * 1.2,
       Math.random() < .6 ? '+' : '.', [255, 255, 255], .9, 0);
   }
