@@ -690,19 +690,28 @@ function emitFalling(f, G, dens) {
 }
 
 // ============================================================ sky
-function makeSky(seed, w, h) {
+// stars live on the same character grid as the flower, like a terminal
+function makeSky(seed) {
   const R = new RNG('sky' + seed);
-  const N = clamp(Math.round(w * h / 1700), 220, 1100);
-  const stars = [];
-  for (let i = 0; i < N; i++) {
-    stars.push({ x: R.next(), y: R.next(), s: R.range(.6, 1.6), a: Math.pow(R.next(), 1.8) * .85 + .1,
-      sp: R.range(.4, 3), ph: R.range(0, TAU), k: R.weighted([[0, .72], [1, .23], [2, .05]]),
-      tint: R.pick([[255, 255, 255], [220, 232, 255], [255, 240, 220], [235, 225, 255]]) });
+  const { cols, rows } = view, n = cols * rows;
+  const stars = [], used = new Set();
+  const put = (c, r, k) => {
+    if (c < 0 || r < 0 || c >= cols || r >= rows) return;
+    const id = r * cols + c; if (used.has(id)) return; used.add(id);
+    stars.push({ c, r, k, a: k === 0 ? R.range(.12, .32) : k === 1 ? R.range(.35, .75) : R.range(.75, 1),
+      sp: R.range(.5, 2.6), ph: R.range(0, TAU), cool: R.range(0, 1) });
+  };
+  const nFaint = Math.round(n * .011), nPlus = Math.round(n * .0055), nBright = Math.round(n * .0022);
+  for (let i = 0; i < nFaint; i++) put(R.int(0, cols - 1), R.int(0, rows - 1), 0);
+  for (let i = 0; i < nPlus; i++) {
+    const c = R.int(0, cols - 1), r = R.int(0, rows - 1); put(c, r, 1);
+    if (R.chance(.18)) put(c + R.pick([1, 2]), r, 1);
   }
-  const flares = [];
-  const nf = R.int(5, 9);
-  for (let i = 0; i < nf; i++) flares.push({ x: R.range(.04, .96), y: R.range(.04, .9), L: R.range(14, 46), sp: R.range(.4, 1.3), ph: R.range(0, TAU), a: R.range(.5, 1) });
-  return { stars, flares, shoot: null, nextShoot: R.range(4, 9), R };
+  for (let i = 0; i < nBright; i++) {
+    const c = R.int(0, cols - 1), r = R.int(0, rows - 1); put(c, r, 2);
+    if (R.chance(.3)) { if (R.chance(.5)) put(c + 1, r, 2); else put(c, r + R.pick([1, 2]), R.pick([1, 2])); }
+  }
+  return { stars, flares: [], nextFlare: R.range(.4, 1.2), R };
 }
 
 // ============================================================ app
@@ -748,7 +757,7 @@ function resize() {
   view.font = Math.min(view.cellW / .6, view.cellH * .95);
   const n = view.cols * view.rows;
   zb = new Float32Array(n); win = new Int32Array(n); ghost = new Float32Array(n);
-  if (G) { sky = makeSky(G.skySeed, w, h); computeView(); }
+  if (G) { sky = makeSky(G.skySeed); computeView(); }
 }
 
 function computeFit(G) {
@@ -768,22 +777,21 @@ function computeFit(G) {
 
 function computeView() {
   const portrait = view.h > view.w;
-  const availH = view.h * (portrait ? .66 : .74), availW = view.w * .9;
+  const availH = view.h * (portrait ? .72 : .8), availW = view.w * .9;
   const persp = D / (D - fit.R);
   view.S = Math.min(availW / (2 * fit.R * persp), availH / ((fit.ymax - fit.ymin) * persp));
-  view.cx = view.w / 2; view.cy = view.h * (portrait ? .43 : .47);
+  view.cx = view.w / 2; view.cy = view.h * (portrait ? .47 : .5);
   view.yMid = (fit.ymin + fit.ymax) / 2;
 }
 
 function setFlower(seed) {
   G = makeGenome(seed);
   computeFit(G); computeView();
-  sky = makeSky(G.skySeed, view.w, view.h);
+  sky = makeSky(G.skySeed);
   parts = []; falls = []; fallTimer = 3; yaw = 0; yawUser = 0;
   const url = new URL(location.href); url.searchParams.set('seed', seed); url.searchParams.delete('t');
   try { history.replaceState(null, '', url); } catch (e) { /* sandboxed */ }
-  document.getElementById('cmd').textContent = `$ bloom --seed ${seed}`;
-  document.getElementById('h1').textContent = `${G.name} · seed ${seed}`;
+  document.getElementById('name').textContent = G.name;
 }
 
 function regrow(seed) { if (!pending) { pending = seed || newSeed(); fade = 1; } }
@@ -994,7 +1002,6 @@ function frame(now) {
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   }
 
-  updateHud(bloom);
   requestAnimationFrame(frame);
 }
 
@@ -1005,71 +1012,87 @@ function addBucket(q, idx) {
 }
 
 // ---------------------------------------------------------------- sky drawing
-function occupied(x, y) {
-  const c = (x / view.cellW) | 0, r = (y / view.cellH) | 0;
+function cellFree(c, r) {
   if (c < 0 || r < 0 || c >= view.cols || r >= view.rows) return false;
-  return win[r * view.cols + c] >= 0;
+  return win[r * view.cols + c] < 0;
+}
+function glow(c, x, y, rad, a) {
+  const rg = c.createRadialGradient(x, y, 0, x, y, rad);
+  rg.addColorStop(0, 'rgba(255,255,255,1)'); rg.addColorStop(.3, 'rgba(255,255,255,.55)'); rg.addColorStop(1, 'rgba(255,255,255,0)');
+  c.globalAlpha = a; c.fillStyle = rg; c.fillRect(x - rad, y - rad, rad * 2, rad * 2);
 }
 function drawSky(c, t, A, dt) {
   if (A <= 0) return;
-  const { w, h } = view;
+  const { cellW, cellH, font } = view, yo = (cellH - font) * .5;
+  c.font = `${font.toFixed(2)}px ${FONT}`;
+  c.textBaseline = 'top';
   for (const s of sky.stars) {
-    const x = s.x * w, y = s.y * h;
-    if (occupied(x, y)) continue;
-    const a = A * s.a * (.55 + .45 * Math.sin(t * s.sp + s.ph));
-    if (a < .02) continue;
+    if (!cellFree(s.c, s.r)) continue;
+    const tw = .5 + .5 * Math.sin(t * s.sp + s.ph);
+    const a = A * s.a * (s.k === 0 ? .6 + .4 * tw : .35 + .65 * tw * tw);
+    if (a < .03) continue;
+    const g = (225 + 30 * (1 - s.cool)) | 0;
+    const x = s.c * cellW, y = s.r * cellH;
     c.globalAlpha = a;
-    c.fillStyle = `rgb(${s.tint[0]},${s.tint[1]},${s.tint[2]})`;
-    if (s.k === 0) c.fillRect(x - s.s / 2, y - s.s / 2, s.s, s.s);
-    else if (s.k === 1) { c.fillRect(x - 2, y - .5, 4, 1); c.fillRect(x - .5, y - 2, 1, 4); }
-    else { c.fillRect(x - 3, y - .5, 6, 1); c.fillRect(x - .5, y - 3, 1, 6); c.fillRect(x - 1, y - 1, 2, 2); }
+    c.fillStyle = `rgb(${g},${g},255)`;
+    if (s.k === 0) c.fillText('.', x, y + yo - cellH * .25);
+    else c.fillText('+', x, y + yo);
+    if (s.k === 2) glow(c, x + cellW * .5, y + cellH * .5, cellW * .6, a * .8);
+  }
+  // flare stars flash up around the plant and fade away
+  if (!paused) {
+    sky.nextFlare -= dt;
+    if (sky.nextFlare <= 0 && T > .6) {
+      sky.nextFlare = sky.R.range(.25, .9);
+      if (sky.flares.length < 5) {
+        const top = project([G.pivot[0], fit.ymax, G.pivot[2]]), bot = project([G.pivot[0], fit.ymin, G.pivot[2]]);
+        const rad = fit.R * view.S * 1.35;
+        const x = view.cx + (sky.R.next() - .5) * 2 * rad, y = lerp(top[1] - cellH * 4, bot[1], sky.R.next());
+        sky.flares.push({ c: Math.floor(x / cellW), r: Math.floor(y / cellH), life: 0, max: sky.R.range(1.6, 3.2),
+          L: sky.R.range(3.5, 6.5), D: sky.R.range(1.6, 2.6), H: sky.R.int(3, 5) });
+      }
+    }
+    for (const f of sky.flares) f.life += dt;
+    sky.flares = sky.flares.filter(f => f.life < f.max);
   }
   for (const f of sky.flares) {
-    const pulse = Math.pow(.5 + .5 * Math.sin(t * f.sp + f.ph), 2.2);
-    const a = A * f.a * (.25 + .75 * pulse);
-    drawFlare(c, f.x * w, f.y * h, f.L * (.75 + .35 * pulse), a);
-  }
-  // shooting star
-  if (!paused) sky.nextShoot -= dt;
-  if (sky.nextShoot <= 0 && !sky.shoot) {
-    const R = sky.R, dir = R.chance(.5) ? 1 : -1;
-    sky.shoot = { x: R.range(.15, .85) * w, y: R.range(.02, .3) * h, vx: dir * R.range(380, 620), vy: R.range(140, 260), life: 0, max: R.range(.6, 1) };
-    sky.nextShoot = R.range(6, 14);
-  }
-  const s = sky.shoot;
-  if (s) {
-    if (!paused) { s.x += s.vx * dt; s.y += s.vy * dt; s.life += dt; }
-    const k = s.life / s.max, a = A * Math.sin(Math.PI * clamp(k));
-    const tl = .22, gx = s.x - s.vx * tl, gy = s.y - s.vy * tl;
-    const g = c.createLinearGradient(gx, gy, s.x, s.y);
-    g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(1, `rgba(255,255,255,${a.toFixed(3)})`);
-    c.globalAlpha = 1; c.strokeStyle = g; c.lineWidth = 1.2;
-    c.beginPath(); c.moveTo(gx, gy); c.lineTo(s.x, s.y); c.stroke();
-    if (k >= 1) sky.shoot = null;
+    const k = f.life / f.max;
+    drawFlare(c, f, A * Math.pow(Math.sin(Math.PI * k), 1.4));
   }
   c.globalAlpha = 1;
 }
-function ray(c, x0, y0, x1, y1, a, dash) {
+function ray(c, x0, y0, x1, y1, a) {
   const g = c.createLinearGradient(x0, y0, x1, y1);
   g.addColorStop(0, 'rgba(255,255,255,0)');
   g.addColorStop(.5, `rgba(255,255,255,${a.toFixed(3)})`);
   g.addColorStop(1, 'rgba(255,255,255,0)');
   c.strokeStyle = g;
-  if (dash) c.setLineDash(dash);
   c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke();
-  if (dash) c.setLineDash([]);
 }
-function drawFlare(c, x, y, L, a) {
+function drawFlare(c, f, a) {
   if (a < .02) return;
+  const { cellW, cellH, font } = view, yo = (cellH - font) * .5;
+  const x = (f.c + .5) * cellW, y = (f.r + .5) * cellH;
+  const L = f.L * cellH, d = f.D * cellH;
   c.globalAlpha = 1; c.lineWidth = 1;
   ray(c, x, y - L, x, y + L, a);
-  ray(c, x - L * .8, y, x + L * .8, y, a * .8, [3, 4]);
-  const d = L * .33;
-  ray(c, x - d, y - d * 1.3, x + d, y + d * 1.3, a * .6);
-  ray(c, x + d, y - d * 1.3, x - d, y + d * 1.3, a * .6);
-  const rg = c.createRadialGradient(x, y, 0, x, y, 5);
-  rg.addColorStop(0, `rgba(255,255,255,${a.toFixed(3)})`); rg.addColorStop(1, 'rgba(255,255,255,0)');
-  c.fillStyle = rg; c.beginPath(); c.arc(x, y, 5, 0, TAU); c.fill();
+  ray(c, x - d * .55, y - d, x + d * .55, y + d, a * .7);
+  ray(c, x + d * .55, y - d, x - d * .55, y + d, a * .7);
+  // dashed horizontal arm made of grid characters
+  c.fillStyle = '#fff';
+  for (let i = 1; i <= f.H * 2; i += 2) {
+    const fa = a * Math.pow(1 - i / (f.H * 2 + 1), 1.2) * .85;
+    for (const sg of [-1, 1]) {
+      const cc = f.c + sg * i;
+      if (!cellFree(cc, f.r)) continue;
+      c.globalAlpha = fa;
+      c.fillText(i >= f.H * 2 - 1 ? '.' : '-', cc * cellW, f.r * cellH + yo);
+    }
+  }
+  c.globalAlpha = a; c.fillStyle = '#fff';
+  c.fillText('+', f.c * cellW, f.r * cellH + yo);
+  glow(c, x, y, cellW * .9, a);
+  c.globalAlpha = 1;
 }
 
 // ---------------------------------------------------------------- particles
@@ -1129,18 +1152,7 @@ function drawParticles(c, A) {
   c.textAlign = 'left'; c.textBaseline = 'top'; c.globalAlpha = 1;
 }
 
-// ---------------------------------------------------------------- HUD
-const hud = { t: document.getElementById('t'), h2: document.getElementById('h2'), h3: document.getElementById('h3'), fps: document.getElementById('fps') };
-let hudLast = 0;
-function updateHud(bloom) {
-  if (performance.now() - hudLast < 100) return;
-  hudLast = performance.now();
-  hud.t.textContent = `● t ${T.toFixed(2)}s`;
-  const turn = ((((yaw + yawUser) * 180 / Math.PI) % 360) + 360) % 360;
-  hud.h2.textContent = `bloom ${(clamp(bloom) * 100).toFixed(1)}%   turn ${turn.toFixed(2)}°`;
-  hud.h3.textContent = `letters ${letters.toLocaleString('en-US')}`;
-  hud.fps.textContent = `${paused ? 'paused' : 'running'} · ${Math.round(fps)} fps`;
-}
+// ---------------------------------------------------------------- label
 function setHud(on) { hudOn = on; document.body.classList.toggle('nohud', !on); }
 
 // ---------------------------------------------------------------- input
@@ -1175,7 +1187,6 @@ window.addEventListener('resize', resize);
 resize();
 setFlower(params.get('seed') || newSeed());
 setHud(hudOn);
-setTimeout(() => document.getElementById('hint').classList.add('gone'), 6000);
 requestAnimationFrame(frame);
 window.__bloom = { regrow, get genome() { return G; }, setTime: t => { T = t; } };
 })();

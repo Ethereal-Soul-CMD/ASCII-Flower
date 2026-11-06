@@ -19,13 +19,13 @@ To host it with GitHub Pages, go to **Settings → Pages**, set the source to th
 | Drag, `←` `→` | Turn the flower |
 | `P` | Pause |
 | `G` | Glow on/off |
-| `H` | Hide the HUD |
+| `H` | Hide the flower name |
 | `S` | Save a PNG |
 | `[` `]` | Less or more detail |
 
 ## Seeds
 
-Each flower comes from a seed. The current seed appears in the HUD and in the URL, so you can share a flower.
+Each flower comes from a seed. The current seed is kept in the URL, so you can share a flower.
 
 ```
 index.html?seed=k2        a crimson rose
@@ -33,7 +33,7 @@ index.html?seed=k26       a coral peony
 index.html?seed=k17&t=12  jump to 12 seconds in
 ```
 
-Extra URL options are `hud=0` and `glow=0`.
+Extra URL options are `hud=0` (hide the name) and `glow=0`.
 
 ## What it can grow
 
@@ -55,7 +55,8 @@ Colors come from 16 palette families (crimson, sunset, picotee, stargazer and mo
 1. **Genome** : a seeded RNG builds a description of the plant. This covers the species, petal layers (count, length, width, opening angles, cup, curl, ruffle, tip shape, timing), centers, sepals, leaves, the stem curve, head tilt and the sky.
 2. **Geometry** : on every frame each petal is rebuilt as a parametric surface. The spine is integrated from an angle profile that blends between the closed bud and the open flower, so blooming is a real shape change and not a scale. Leaves, stem (a Bézier tube), stamens and disks are made the same way.
 3. **Rendering** : surface points are projected into a character grid with a z-buffer. Lit surfaces get letters from a density ramp. Petal rims and silhouettes get `/ \ | _ -` based on the edge direction on screen. A two-pass downscaled copy of the frame adds the glow.
-4. **Timeline** : faint `+` dust marks where the plant will appear, and a drawing light climbs the stem with sparks. Leaves unfold, the bud closes in, petals open outer layers first, and then the flower turns and breathes while pollen drifts and the odd petal falls.
+4. **Sky** : stars sit on the same character grid as the flower as `.` and `+` glyphs, some in pairs, each twinkling at its own rate. Flare stars flash up around the plant for a few seconds with a thin vertical ray, thin diagonal rays and a dashed arm of `-` characters.
+5. **Timeline** : faint `+` dust marks where the plant will appear, and a drawing light climbs the stem with sparks. Leaves unfold, the bud closes in, petals open outer layers first, and then the flower turns and breathes while pollen drifts and the odd petal falls.
 
 ## License
 
