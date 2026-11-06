@@ -474,7 +474,7 @@ function makeGenome(seed) {
   G.bloomDur = R.range(7.5, 10) / 1.1;
   G.skySeed = R.int(0, 1e9);
   G.id = xmur3(String(seed)) & 0xffff;
-  G.name = `${fam === 'stargazer' ? 'stargazer' : fam} ${type}`;
+  G.name = `${fam} ${type}`.replace(/\b\w/g, c => c.toUpperCase());
   return G;
 }
 
@@ -1207,6 +1207,16 @@ function frame(now) {
         if (model) { tx = V[0] * a + V[1] * bb + V[2] * c; ty = V[3] * a + V[4] * bb + V[5] * c; } else { tx = a; ty = bb; }
         isStroke = true;
       } else if (nz < (kind === 5 ? (was ? .55 : .45) : (was ? .28 : .2))) { tx = -ny; ty = nx; isStroke = true; }
+      else {
+        const c0 = idx % cols;
+        const eL = c0 > 0 && win[idx - 1] < 0, eR = c0 < cols - 1 && win[idx + 1] < 0;
+        const eU = idx >= cols && win[idx - cols] < 0, eD = idx + cols < cols * rows && win[idx + cols] < 0;
+        if (eL || eR || eU || eD) {
+          // direction of open sky, then run the stroke perpendicular to it
+          const ox = (eR ? 1 : 0) - (eL ? 1 : 0), oy = (eU ? 1 : 0) - (eD ? 1 : 0);
+          if (ox !== 0 || oy !== 0) { tx = -oy; ty = ox; isStroke = true; }
+        }
+      }
       // outer outline: any stroke. inside the flower: diagonal and vertical strokes keep edges crisp,
       // but a horizontal rim becomes a bright line of dense letters instead of a row of dashes
       let rim = false;
@@ -1224,7 +1234,7 @@ function frame(now) {
         else ch = dx * dy < 0 ? '/' : '\\';
         // near a bin edge, keep last frame's stroke so it does not flutter
         if (was && ch !== pch && (Math.abs(ang - .42) < .12 || Math.abs(ang - 1.2) < .12)) ch = pch;
-        r *= 1.08; g *= 1.08; b *= 1.08;
+        r *= 1.3; g *= 1.3; b *= 1.3;
       } else {
         cls = 1;
         const ramp = kind === 5 ? STEMR : RAMP;
@@ -1280,8 +1290,8 @@ function frame(now) {
     g2x.clearRect(0, 0, g2.width, g2.height); g2x.drawImage(g1, 0, 0, g2.width, g2.height);
     ctx.globalCompositeOperation = 'lighter';
     ctx.imageSmoothingEnabled = true;
-    ctx.globalAlpha = .7; ctx.drawImage(g1, 0, 0, canvas.width, canvas.height);
-    ctx.globalAlpha = .45; ctx.drawImage(g2, 0, 0, canvas.width, canvas.height);
+    ctx.globalAlpha = .45; ctx.drawImage(g1, 0, 0, canvas.width, canvas.height);
+    ctx.globalAlpha = .35; ctx.drawImage(g2, 0, 0, canvas.width, canvas.height);
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   }
 
