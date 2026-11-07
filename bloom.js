@@ -1094,6 +1094,7 @@ const buckets = new Map();
 const cellChar = [], prevChar = [];
 const FILLI = new Int32Array(30000), FILLZ = new Float32Array(10000);
 const FRESH = new Int32Array(4000); let nFresh = 0;
+const FRESHH = new Int32Array(4000); let nFreshH = 0, headStart = 0;
 let gsparks = [];
 let prevCls = new Int8Array(0), prevRi = new Int8Array(0), prevKind = new Int8Array(0), curCls = new Int8Array(0), curRi = new Int8Array(0), curKind = new Int8Array(0);
 let flickN = 0, flickAvg = 0;
@@ -1141,6 +1142,7 @@ function frame(now) {
   NP = 0;
   emitStem(G, st, dens0, view.cellH / view.cellW);
   emitLeaves(G, st, dens0);
+  headStart = NP;
   if (bx >= 1 && st.head >= 1) {
     // fully open: the head no longer changes shape, so build it once and reuse it
     if (!G.headCache || G.headCacheDens !== dens) {
@@ -1231,7 +1233,7 @@ function frame(now) {
 
   // shade cells and choose glyphs
   buckets.clear();
-  nFresh = 0;
+  nFresh = 0; nFreshH = 0;
   letters = 0; flickN = 0;
   if (prevChar.length !== cellChar.length) prevChar.length = cellChar.length;
   for (let i = 0; i < cellChar.length; i++) prevChar[i] = cellChar[i];
@@ -1315,7 +1317,7 @@ function frame(now) {
       }
     }
     curCls[idx] = cls; curKind[idx] = kind;
-    if (fresh && nFresh < FRESH.length) FRESH[nFresh++] = idx;
+    if (fresh) { if (p >= headStart && p < NMODEL) { if (nFreshH < FRESHH.length) FRESHH[nFreshH++] = idx; } else if (nFresh < FRESH.length) FRESH[nFresh++] = idx; }
     if (fresh) { r = lerp(r, 1, .38); g = lerp(g, 1, .38); b = lerp(b, 1, .38); }
     r = clamp(r); g = clamp(g); b = clamp(b);
     if (prevChar[idx] !== ch) flickN++;
@@ -1483,7 +1485,19 @@ function spawn(x, y, vx, vy, life, ch, col, size, grav) {
 }
 function updateParticles(dt, head, bloom, st) {
   if (paused) return;
-  // diamond dust: a cloud of grid sparks thrown off whatever is forming right now
+  // flower head forming: the dense spark cloud
+  if (nFreshH > 0) {
+    const n = Math.min(70, Math.round(dt * 340));
+    for (let k = 0; k < n; k++) {
+      const idx = FRESHH[(Math.random() * nFreshH) | 0];
+      const r0 = (idx / view.cols) | 0, c0 = idx % view.cols;
+      const dx = Math.round((Math.random() - .5) * 2 * Math.pow(Math.random(), 1.4) * 13);
+      const dy = -Math.round(Math.pow(Math.random(), 1.3) * 7) + (Math.random() < .3 ? Math.round(Math.random() * 2) : 0);
+      gsparks.push({ c: c0 + dx, r: r0 + dy, life: 0, max: .3 + Math.random() * .7,
+        ch: Math.random() < .55 ? '+' : '.', a: .45 + Math.random() * .55, up: Math.random() < .35 ? .8 + Math.random() * 2 : 0, y: 0 });
+    }
+  }
+  // stem and leaves forming: a light sprinkle
   if (nFresh > 0) {
     const n = Math.min(20, Math.round(dt * 95));
     for (let k = 0; k < n; k++) {
@@ -1494,23 +1508,6 @@ function updateParticles(dt, head, bloom, st) {
       const dy = -Math.round(Math.pow(Math.random(), 1.5) * 5) + (Math.random() < .25 ? 1 : 0);
       gsparks.push({ c: c0 + dx, r: r0 + dy, life: 0, max: .3 + Math.random() * .7,
         ch: Math.random() < .55 ? '+' : '.', a: .45 + Math.random() * .55, up: Math.random() < .35 ? .8 + Math.random() * 2 : 0, y: 0 });
-    }
-  }
-  // as the bud starts to open: one point just above it, sparks bursting out from it
-  if (bloom > .005 && G.burstAt === undefined) {
-    G.burstAt = T;
-    const top = project(add(G.stem.P3, mv(headMatrix(G, T, 0), [0, G.headH * 1.05, 0])));
-    const tc = (top[0] / view.cellW) | 0, tr = ((top[1] / view.cellH) | 0) - 1;
-    const asp = view.cellH / view.cellW;   // cells are taller than wide: stretch sideways so the burst looks round
-    // a soft drift: each spark glides out, eases to a stop, rises slowly and sways, twinkling as it fades
-    const n = 22 + ((Math.random() * 8) | 0);
-    for (let k = 0; k < n; k++) {
-      const ang = -Math.PI / 2 + (Math.random() - .5) * 2 * 1.7;
-      const dist = 2.5 + Math.pow(Math.random(), .8) * 9;            // how far it glides, in rows
-      gsparks.push({ c: tc + Math.round((Math.random() - .5) * 2), r: tr, life: -Math.random() * .8, max: 1.3 + Math.random() * 1.1,
-        ch: '+', a: .55 + Math.random() * .45, up: 0, y: 0, x: 0, fl: true,
-        dx: Math.cos(ang) * dist * asp, dy: -Math.sin(ang) * dist, rise: 1 + Math.random() * 2.5,
-        sway: (.6 + Math.random() * 1.2) * asp, sf: 1.5 + Math.random() * 2, ph: Math.random() * TAU, small: Math.random() < .35 });
     }
   }
   // glitter all around once the sky is out, also on the grid
