@@ -1065,7 +1065,7 @@ function setFlower(seed) {
   G = makeGenome(seed);
   computeFit(G); computeView();
   sky = makeSky(G.skySeed);
-  parts = []; falls = []; fallTimer = 3; yaw = 0; yawUser = 0; densScale = 1; G.headCache = null;
+  parts = []; gsparks = []; falls = []; fallTimer = 3; yaw = 0; yawUser = 0; densScale = 1; G.headCache = null;
   const url = new URL(location.href); url.searchParams.set('seed', seed); url.searchParams.delete('t');
   try { history.replaceState(null, '', url); } catch (e) { /* sandboxed */ }
   document.getElementById('name').textContent = G.name;
@@ -1093,6 +1093,8 @@ const LK = norm([-.35, .85, .65]), HK = norm(add(LK, [0, 0, 1]));
 const buckets = new Map();
 const cellChar = [], prevChar = [];
 const FILLI = new Int32Array(30000), FILLZ = new Float32Array(10000);
+const FRESH = new Int32Array(4000); let nFresh = 0;
+let gsparks = [];
 let prevCls = new Int8Array(0), prevRi = new Int8Array(0), prevKind = new Int8Array(0), curCls = new Int8Array(0), curRi = new Int8Array(0), curKind = new Int8Array(0);
 let flickN = 0, flickAvg = 0;
 
@@ -1200,7 +1202,6 @@ function frame(now) {
     const idx = r * cols + c;
     if (ord > head) {
       const d = ord - head;
-      if (d < GHOST && BUF[o + 15] < .55 * (1 - d / GHOST) && d < ghost[idx]) ghost[idx] = d;
       continue;
     }
     if (qz > zb[idx]) { zb[idx] = qz; win[idx] = p; if (c < bx0) bx0 = c; if (c > bx1) bx1 = c; if (r < by0) by0 = r; if (r > by1) by1 = r; }
@@ -1230,6 +1231,7 @@ function frame(now) {
 
   // shade cells and choose glyphs
   buckets.clear();
+  nFresh = 0;
   letters = 0; flickN = 0;
   if (prevChar.length !== cellChar.length) prevChar.length = cellChar.length;
   for (let i = 0; i < cellChar.length; i++) prevChar[i] = cellChar[i];
@@ -1313,7 +1315,8 @@ function frame(now) {
       }
     }
     curCls[idx] = cls; curKind[idx] = kind;
-    if (fresh) { r = lerp(r, 1, .65); g = lerp(g, 1, .65); b = lerp(b, 1, .65); ch = RAMP[(Math.random() * RAMP.length) | 0]; }
+    if (fresh && nFresh < FRESH.length) FRESH[nFresh++] = idx;
+    if (fresh) { r = lerp(r, 1, .38); g = lerp(g, 1, .38); b = lerp(b, 1, .38); }
     r = clamp(r); g = clamp(g); b = clamp(b);
     if (prevChar[idx] !== ch) flickN++;
     cellChar[idx] = ch;
@@ -1342,6 +1345,16 @@ function frame(now) {
       fctx.fillText(cellChar[idx], (idx % cols) * cellW, ((idx / cols) | 0) * cellH + yo);
     }
   }
+  fctx.fillStyle = '#fff';
+  for (const g of gsparks) {
+    const r = g.r - Math.round(g.y);
+    if (g.c < 0 || r < 0 || g.c >= cols || r >= rows || win[r * cols + g.c] >= 0) continue;
+    const k = g.life / g.max, a = alpha * g.a * (k < .15 ? k / .15 : Math.pow(1 - (k - .15) / .85, 1.3));
+    if (a < .03) continue;
+    fctx.globalAlpha = a;
+    fctx.fillText(g.ch, g.c * cellW, r * cellH + yo - (g.ch === '.' ? cellH * .25 : 0));
+  }
+  fctx.globalAlpha = 1;
   drawParticles(fctx, alpha);
   fctx.globalAlpha = 1;
 
@@ -1466,27 +1479,29 @@ function spawn(x, y, vx, vy, life, ch, col, size, grav) {
 }
 function updateParticles(dt, head, bloom, st) {
   if (paused) return;
-  // sparks off the drawing light
-  if (head > .01 && head < O_MAX + .05 && T < DRAW1 + .2) {
-    let tip;
-    if (head <= 1) tip = bez(G.stem, head);
-    else tip = add(G.stem.P3, mv(headMatrix(G, T, 0), [0, G.headH * clamp((head - 1.08) / .42), 0]));
-    const s = project(tip);
-    const n = Math.round(dt * 70);
-    for (let i = 0; i < n; i++) {
-      const a = Math.random() * TAU, sp = 15 + Math.random() * 70;
-      spawn(s[0], s[1], Math.cos(a) * sp, Math.sin(a) * sp - 25, .4 + Math.random() * .9,
-        SPARK[(Math.random() * SPARK.length) | 0], Math.random() < .7 ? [255, 255, 255] : [255, 236, 190], .8 + Math.random() * .5, 10);
+  // diamond dust: a cloud of grid sparks thrown off whatever is forming right now
+  if (nFresh > 0) {
+    const n = Math.min(70, Math.round(dt * 340));
+    for (let k = 0; k < n; k++) {
+      const idx = FRESH[(Math.random() * nFresh) | 0];
+      const r0 = (idx / view.cols) | 0, c0 = idx % view.cols;
+      // mostly sideways and a little upward, denser close to the forming point
+      const dx = Math.round((Math.random() - .5) * 2 * Math.pow(Math.random(), 1.4) * 13);
+      const dy = -Math.round(Math.pow(Math.random(), 1.3) * 7) + (Math.random() < .3 ? Math.round(Math.random() * 2) : 0);
+      gsparks.push({ c: c0 + dx, r: r0 + dy, life: 0, max: .3 + Math.random() * .7,
+        ch: Math.random() < .55 ? '+' : '.', a: .45 + Math.random() * .55, up: Math.random() < .35 ? .8 + Math.random() * 2 : 0, y: 0 });
     }
   }
-  // diamond dust glitter around the plant
-  const top = project([G.pivot[0], fit.ymax, G.pivot[2]]), bot = project([G.pivot[0], fit.ymin, G.pivot[2]]);
-  const rad = fit.R * view.S * 1.15;
-  const rate = 7 * skyLevel;
-  if (Math.random() < dt * rate) {
-    spawn(view.cx + (Math.random() - .5) * 2 * rad, lerp(top[1], bot[1], Math.random()), 0, -4, .5 + Math.random() * 1.2,
-      Math.random() < .6 ? '+' : '.', [255, 255, 255], .9, 0);
+  // glitter all around once the sky is out, also on the grid
+  if (skyLevel > 0 && Math.random() < dt * 8 * skyLevel) {
+    const top = project([G.pivot[0], fit.ymax, G.pivot[2]]), bot = project([G.pivot[0], fit.ymin, G.pivot[2]]);
+    const rad = fit.R * view.S * 1.15;
+    const x = view.cx + (Math.random() - .5) * 2 * rad, y = lerp(top[1], bot[1], Math.random());
+    gsparks.push({ c: (x / view.cellW) | 0, r: (y / view.cellH) | 0, life: 0, max: .5 + Math.random() * .9, ch: Math.random() < .6 ? '+' : '.', a: .7, up: 0, y: 0 });
   }
+  for (const g of gsparks) { g.life += dt; g.y += g.up * dt; }
+  gsparks = gsparks.filter(g => g.life < g.max);
+  if (gsparks.length > 1500) gsparks.splice(0, gsparks.length - 1500);
   // pollen drifting up once open
   if (bloom > .85 && Math.random() < dt * 2.5) {
     const hc = project(add(G.stem.P3, mv(headMatrix(G, T, 0), [0, G.headH * .5, 0])));
