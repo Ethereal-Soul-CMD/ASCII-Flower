@@ -1350,10 +1350,13 @@ function frame(now) {
     const r = g.r - Math.round(g.y), cc = g.c + Math.round(g.x || 0);
     if (cc < 0 || r < 0 || cc >= cols || r >= rows || win[r * cols + cc] >= 0) continue;
     if (g.life < 0) continue;
-    const k = g.life / g.max, a = alpha * g.a * (k < .15 ? k / .15 : Math.pow(1 - (k - .15) / .85, 1.3));
+    const k = g.life / g.max;
+    let a = alpha * g.a * (k < .15 ? k / .15 : Math.pow(1 - (k - .15) / .85, 1.3));
+    let ch = g.ch;
+    if (g.fl) { a *= .7 + .3 * Math.sin(g.life * 9 + g.ph); if (g.small || k > .55) ch = '.'; }
     if (a < .03) continue;
     fctx.globalAlpha = a;
-    fctx.fillText(g.ch, cc * cellW, r * cellH + yo - (g.ch === '.' ? cellH * .25 : 0));
+    fctx.fillText(ch, cc * cellW, r * cellH + yo - (ch === '.' ? cellH * .25 : 0));
   }
   fctx.globalAlpha = 1;
   drawParticles(fctx, alpha);
@@ -1497,18 +1500,17 @@ function updateParticles(dt, head, bloom, st) {
   if (bloom > .005 && G.burstAt === undefined) {
     G.burstAt = T;
     const top = project(add(G.stem.P3, mv(headMatrix(G, T, 0), [0, G.headH * 1.05, 0])));
-    const tc = (top[0] / view.cellW) | 0, tr = ((top[1] / view.cellH) | 0) - 3;
+    const tc = (top[0] / view.cellW) | 0, tr = ((top[1] / view.cellH) | 0) - 1;
     const asp = view.cellH / view.cellW;   // cells are taller than wide: stretch sideways so the burst looks round
-    // an uneven scatter with real momentum: each spark launches fast, drag slows it, gravity bends it back down
-    const n = 22 + ((Math.random() * 9) | 0);
+    // a soft drift: each spark glides out, eases to a stop, rises slowly and sways, twinkling as it fades
+    const n = 22 + ((Math.random() * 8) | 0);
     for (let k = 0; k < n; k++) {
-      const ang = -Math.PI / 2 + (Math.random() - .5) * 2 * 2.2;   // mostly up and out, a few sideways or lower
-      const sp = 6 + Math.pow(Math.random(), 1.4) * 26;            // cells per second at launch
-      gsparks.push({ c: tc + Math.round((Math.random() - .5) * 4), r: tr + Math.round((Math.random() - .5) * 3),
-        life: -Math.pow(Math.random(), 1.5) * .6, max: .6 + Math.random() * .9,
-        ch: Math.random() < .55 ? '+' : '.', a: .5 + Math.random() * .5, up: 0, y: 0, x: 0,
-        vx: Math.cos(ang) * sp * asp, vy: -Math.sin(ang) * sp,
-        drag: 1.6 + Math.random() * 1.6, grav: 7 + Math.random() * 7 });
+      const ang = -Math.PI / 2 + (Math.random() - .5) * 2 * 1.7;
+      const dist = 2.5 + Math.pow(Math.random(), .8) * 9;            // how far it glides, in rows
+      gsparks.push({ c: tc + Math.round((Math.random() - .5) * 2), r: tr, life: -Math.random() * .8, max: 1.3 + Math.random() * 1.1,
+        ch: '+', a: .55 + Math.random() * .45, up: 0, y: 0, x: 0, fl: true,
+        dx: Math.cos(ang) * dist * asp, dy: -Math.sin(ang) * dist, rise: 1 + Math.random() * 2.5,
+        sway: (.6 + Math.random() * 1.2) * asp, sf: 1.5 + Math.random() * 2, ph: Math.random() * TAU, small: Math.random() < .35 });
     }
   }
   // glitter all around once the sky is out, also on the grid
@@ -1521,11 +1523,10 @@ function updateParticles(dt, head, bloom, st) {
   for (const g of gsparks) {
     g.life += dt;
     if (g.life < 0) continue;
-    if (g.vx !== undefined) {
-      // momentum: move, then drag slows both axes and gravity pulls downward
-      g.x += g.vx * dt; g.y += g.vy * dt;
-      const d = Math.exp(-g.drag * dt);
-      g.vx *= d; g.vy = g.vy * d - g.grav * dt;
+    if (g.fl) {
+      const k = g.life / g.max, e = 1 - Math.pow(1 - k, 3);   // ease out: quick start, gentle stop
+      g.x = g.dx * e + Math.sin(g.life * g.sf + g.ph) * g.sway * k;
+      g.y = g.dy * e + g.rise * k;
     } else g.y += g.up * dt;
   }
   gsparks = gsparks.filter(g => g.life < g.max);
