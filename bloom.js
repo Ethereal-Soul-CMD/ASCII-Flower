@@ -1,12 +1,6 @@
-/*
-  ascii-bloom
-  A generative ASCII flower that grows, blooms and turns under a field of stars.
-  Every seed gives a different species, shape, palette, stem, leaves and sky.
-*/
 (() => {
 'use strict';
 
-// ============================================================ random
 function xmur3(str) {
   let h = 1779033703 ^ str.length;
   for (let i = 0; i < str.length; i++) {
@@ -46,7 +40,6 @@ function hash1(n) {
   return (n >>> 0) / 4294967296;
 }
 
-// ============================================================ math
 const TAU = Math.PI * 2;
 const clamp = (x, a = 0, b = 1) => (x < a ? a : x > b ? b : x);
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -80,8 +73,6 @@ const mul = (a, k) => [a[0] * k, a[1] * k, a[2] * k];
 const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 const norm = a => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
 
-// ============================================================ palettes
-// each family: base (deep, at the petal heart), body, tip, edge, in HSV
 const FAM = {
   crimson:   [[350, .95, .30], [352, .90, .70], [356, .82, .94], [2, .50, 1]],
   scarlet:   [[0, .95, .38], [4, .90, .84], [8, .80, 1], [12, .50, 1]],
@@ -116,7 +107,6 @@ const FAM = {
   saucer:    [[325, .7, .58], [330, .4, .94], [340, .1, 1], [0, 0, 1]],
   peppermint:[[0, .1, .8], [0, 0, .97], [0, 0, 1], [350, .75, 1]],
 };
-// some families carry streaks along the veins: [color hsv, streak count]
 const FAM_STRIPE = { peppermint: [[352, .85, .85], 7], flame: [[2, .9, .8], 5], autumn: [[10, .9, .45], 9] };
 const FAM_EDGE = { picotee: [0.95, 0.55], stargazer: [0.75, 0.6], sunset: [0.5, 0.7], ocean: [0.7, 0.55], saucer: [0.4, 0.8], peppermint: [0.5, 0.8] };
 
@@ -131,7 +121,6 @@ function makePalette(R, fam) {
     stripeN: FAM_STRIPE[fam] ? FAM_STRIPE[fam][1] : 0, light: FAM[fam][1][1] < .3 && FAM[fam][1][2] > .9 };
 }
 
-// ============================================================ species
 const SPECIES = {
   rose:    { w: 3.0, fams: ['crimson', 'crimson', 'scarlet', 'pink', 'blush', 'cream', 'yellow', 'coral', 'lilac', 'sunset', 'picotee', 'peach', 'apricot', 'burgundy', 'midnight', 'lavender', 'ocean', 'flame'] },
   tulip:   { w: 1.4, fams: ['scarlet', 'yellow', 'pink', 'purple', 'white', 'orange', 'sunset', 'magenta', 'picotee', 'flame', 'midnight', 'apricot', 'lavender', 'peppermint'] },
@@ -306,7 +295,7 @@ function makeGenome(seed) {
     }
     G.centers.push({ kind: 'disk', rc: .05 * size, h: .18 * size, y0: .03, c0: [.75, .85, .45], c1: [.85, .75, .45], c2: [.9, .6, .55] });
     G.centers.push({ kind: 'ring', n: 40, r: .06 * size, len: .05 * size, y0: .02, fil: [1, .9, .85], anth: [1, .7, .65] });
-  } else { // anemone or camellia
+  } else {
     const n = R.int(1, 2), count = R.int(5, 8), len = R.range(.42, .55) * size, camellia = R.chance(.45);
     for (let l = 0; l < n; l++) {
       const phO0 = R.range(.75, 1.1) - l * .2;
@@ -322,7 +311,6 @@ function makeGenome(seed) {
       G.centers.push({ kind: 'ring', n: 50, r: .095 * size, len: .06 * size, y0: .02, fil: [.12, .1, .2], anth: [.06, .06, .18] });
     }
   }
-  // two-tone: inner layers drift toward a matching second colour
   const TWO = { yellow: ['crimson', 'coral', 'pink', 'scarlet'], cream: ['peach', 'blush', 'pink'], white: ['pink', 'blush', 'lemon', 'lavender'],
     blush: ['crimson', 'magenta'], peach: ['coral', 'apricot', 'lemon'], pink: ['white', 'lemon', 'magenta'], lemon: ['orange', 'coral'],
     apricot: ['lemon', 'peach'], lavender: ['purple', 'white'], coral: ['lemon', 'yellow'], magenta: ['white', 'lemon'], orange: ['yellow', 'scarlet'],
@@ -333,16 +321,13 @@ function makeGenome(seed) {
     L.forEach((P, l) => { const t = Math.pow(1 - l / (L.length - 1), 1.3) * .9; if (t > .05) P.pal = mixPal(pal, p2, t); });
     G.twoTone = p2.fam;
   } else if ((type === 'daisy' || type === 'cosmos') && TWO[fam] && R.chance(.35)) {
-    // a contrasting ring at the heart of each petal
     const p2 = makePalette(R, R.pick(TWO[fam]));
     pal.blotch = p2.body;
     L.forEach(P => { P.blotch = .85; P.blotchU = R.range(.22, .32); });
   }
-  // inner layers first in the list, outer ones last
   G.layers = L;
   G.headH = Math.max(...L.map(p => p.len)) * 0.95;
 
-  // sepals
   if (type === 'rose' || type === 'peony' || type === 'anemone' || type === 'dahlia') {
     const len = (type === 'rose' ? .3 : .2) * size;
     G.sepals = basePetal({ count: 5, len, W: len * .2, r0: .03, y0: -.01, phC0: .25, phC1: -.12, phO0: 1.2, phO1: 2.5, curl: .4,
@@ -362,9 +347,6 @@ function makeGenome(seed) {
       cupC: .2, cupO: .2, wrap: 0, wk: .9, we: 1, veins: 1, gloss: .2 });
   }
 
-  // greens
-  // the green follows the flower: warm blooms get yellow-greens, cool blooms blue-greens,
-  // pale blooms soft muted greens, deep blooms deep greens
   const fh = FAM[fam][1][0], fs = FAM[fam][1][1], fv = FAM[fam][1][2];
   const warm = fh < 75 || fh > 290, cool = fh >= 170 && fh <= 290;
   const gh = (warm ? R.range(88, 108) : cool ? R.range(128, 148) : R.range(105, 125)) + R.range(-4, 4);
@@ -376,7 +358,6 @@ function makeGenome(seed) {
   };
   G.sepalPal = { base: G.green.dark, body: G.green.body, tip: G.green.light, edge: G.green.light, edgeAmt: .2, edgeStart: .8, spot: G.green.dark };
 
-  // head orientation and stem
   const tiltRange = { rose: [.05, .35], tulip: [0, .2], lily: [.75, 1.15], daisy: [.75, 1.05], dahlia: [.45, .8], peony: [.2, .45], lotus: [.15, .4], anemone: [.6, .95],
     sunflower: [.75, 1.05], cosmos: [.6, .95], hibiscus: [.55, .95], iris: [0, .15], poppy: [.3, .65], carnation: [.05, .3], magnolia: [.05, .3] }[type];
   G.head = { tilt: R.range(tiltRange[0], tiltRange[1]), az: R.range(-.7, .7), spin: R.range(0, TAU) };
@@ -391,11 +372,10 @@ function makeGenome(seed) {
   G.pivot = [P3[0] * .5, 0, P3[2] * .5];
   G.stemBase = { P1: G.stem.P1.slice(), P2: G.stem.P2.slice(), P3: P3.slice() };
   G.windPh = R.range(0, TAU);
-  if (type === 'carnation') { // swollen nodes
+  if (type === 'carnation') {
     G.nodes = [R.range(.22, .3), R.range(.5, .58), R.range(.76, .82)];
   }
 
-  // leaves
   const lv = [];
   const lsz = (type === 'lotus' || type === 'tulip') ? 1.1 : 1.3;
   const leaf = o => Object.assign({ u: .4, psi: 0, len: .5, W: .14, elev: 1.0, droop: .6, fold: .5, serr: 0, teeth: 10,
@@ -480,7 +460,7 @@ function makeGenome(seed) {
       for (const sg of [0, Math.PI]) lv.push(leaf({ u, psi: a + sg, len: R.range(.26, .36) * size, W: R.range(.025, .035) * size,
         elev: R.range(.5, .8), droop: R.range(.6, 1.1), fold: .3, shape: 'grass', petiole: 0, wave: 0 }));
     }
-  } else { // anemone: a whorl of three just under the flower and one low leaf
+  } else {
     const u = R.range(.62, .74);
     for (let i = 0; i < 3; i++) {
       lv.push(leaf({ u, psi: psi + i * TAU / 3, len: R.range(.22, .3) * size, W: R.range(.07, .09) * size,
@@ -491,7 +471,6 @@ function makeGenome(seed) {
   }
   G.leaves = lv;
 
-
   G.bloomDur = R.range(7.5, 10) / 1.1;
   G.skySeed = R.int(0, 1e9);
   G.id = xmur3(String(seed)) & 0xffff;
@@ -499,7 +478,6 @@ function makeGenome(seed) {
   return G;
 }
 
-// ============================================================ geometry buffer
 const STRIDE = 19, MAXP = 320000;
 const BUF = new Float32Array(MAXP * STRIDE);
 let NP = 0, NMODEL = 0;
@@ -517,7 +495,6 @@ const TROW = new Float32Array(260), TCOL = new Float32Array(100);
 const GP = new Float32Array(GMAX * 3), GC = new Float32Array(GMAX * 3), GO = new Float32Array(GMAX);
 const GK = new Uint8Array(GMAX), GN = new Float32Array(GMAX * 3), GT = new Float32Array(GMAX * 3);
 
-// turns a filled grid of positions into points with normals, edges and colors
 function emitGrid(nu, nv, o) {
   const N = nu * nv;
   for (let i = 0; i < nu; i++) {
@@ -565,9 +542,7 @@ function emitCurve(fn, n, color, o0, o1, kind, id, gloss = .2) {
   }
 }
 
-// ---------------------------------------------------------------- petals
 const SR = new Float32Array(112), SY = new Float32Array(112), SPh = new Float32Array(112);
-// per-column scratch for the petal builder
 const CV = new Float32Array(80), CAV = new Float32Array(80), CNOTCH = new Float32Array(80), CFR = new Float32Array(80);
 const CRS = new Float32Array(80), CRC = new Float32Array(80), CVEIN = new Float32Array(80), CSTS = new Float32Array(80), CSTC = new Float32Array(80);
 const CBL = new Float32Array(80), CBR = new Float32Array(80), CCS = new Float32Array(80), CCC = new Float32Array(80);
@@ -592,7 +567,6 @@ function emitPetal(P, open, theta, M, T, pal, orderBase, orderSpan, headH, id, d
   const reshape = P.notch > 0 || P.fringe > 0;
   const ruffleK = P.ruffle * W, crinkK = P.crinkle * W * .045;
   const stripe = pal.stripe, blotch = P.blotch ? pal.blotch : null, beardC = P.beard ? P.beardC : null;
-  // everything that depends only on the column
   for (let j = 0; j < nv; j++) {
     const v = -1 + 2 * j / (nv - 1), av = v < 0 ? -v : v;
     CV[j] = v; CAV[j] = av;
@@ -616,7 +590,6 @@ function emitPetal(P, open, theta, M, T, pal, orderBase, orderSpan, headH, id, d
     const rowR = ruffleK * u15;
     const crA = crinkK ? crinkK * sstep(.1, .4, u) : 0;
     const cs23 = Math.sin(u * 23), cc23 = Math.cos(u * 23), sst = stripe ? Math.sin(u * 2.5) : 0, cst = stripe ? Math.cos(u * 2.5) : 0;
-    // base color of this row, before per-column changes
     let r0 = base[0] + (body[0] - base[0]) * t1, g0 = base[1] + (body[1] - base[1]) * t1, b0 = base[2] + (body[2] - base[2]) * t1;
     r0 += (tip[0] - r0) * t2; g0 += (tip[1] - g0) * t2; b0 += (tip[2] - b0) * t2;
     const orow = SR[i], yrow = SY[i], prow = SPh[i];
@@ -637,7 +610,6 @@ function emitPetal(P, open, theta, M, T, pal, orderBase, orderSpan, headH, id, d
         let al = lat / (rad > .02 ? rad : .02); al = al < -2.8 ? -2.8 : al > 2.8 ? 2.8 : al;
         Rr = rad + (rad * Math.cos(al) - rad) * wrapK; Tn = lat + (rad * Math.sin(al) - lat) * wrapK;
       }
-      // sin(a + 4u) by angle addition, so no trig per point
       let off = cup * hw * v * v + rowR * (CRS[j] * cu + CRC[j] * su);
       if (crA) off += crA * (CCS[j] * cc23 + CCC[j] * cs23) * Math.sin(v * 17 - u * 13 + sph);
       const Rl = Rr + nr * off, ly = yy + nyy * off;
@@ -646,7 +618,6 @@ function emitPetal(P, open, theta, M, T, pal, orderBase, orderSpan, headH, id, d
       GP[k] = M[0] * lx + M[1] * ly + M[2] * lz + T[0];
       GP[k + 1] = M[3] * lx + M[4] * ly + M[5] * lz + T[1];
       GP[k + 2] = M[6] * lx + M[7] * ly + M[8] * lz + T[2];
-      // color
       let cr = r0, cg = g0, cb = b0;
       const ex = u * .92 > av ? u * .92 : av;
       if (ex > edgeStart) {
@@ -669,7 +640,7 @@ function emitPetal(P, open, theta, M, T, pal, orderBase, orderSpan, headH, id, d
       if (beardC && av < .13 && u > .06 && u < .48) { cr = beardC[0]; cg = beardC[1]; cb = beardC[2]; mm = 1; kind = 6; }
       if (P.spots && u > .12 && u < .62 && av < .75 && hash1(id * 131 + i * 977 + j * 31) < .09 * P.spots) {
         cr = spot[0]; cg = spot[1]; cb = spot[2]; mm = 1;
-      } else if (!kind && u > .35 && hash1(id * 53 + i * 613 + j * 7) < .0012) kind = 3; // dew drop
+      } else if (!kind && u > .35 && hash1(id * 53 + i * 613 + j * 7) < .0012) kind = 3;
       mm *= tone * (pal.light ? 1.28 : 1);
       GC[k] = cr * mm; GC[k + 1] = cg * mm; GC[k + 2] = cb * mm;
       const oy = ly / headH;
@@ -682,7 +653,6 @@ function emitPetal(P, open, theta, M, T, pal, orderBase, orderSpan, headH, id, d
   emitGrid(nu, nv, { tip: true, sides: true, ref: mv(M, nl), id, gloss: P.gloss });
 }
 
-// ---------------------------------------------------------------- stem
 function bez(S, u) {
   const a = 1 - u, b0 = a * a * a, b1 = 3 * a * a * u, b2 = 3 * a * u * u, b3 = u * u * u;
   return [0, 1, 2].map(k => b0 * S.P0[k] + b1 * S.P1[k] + b2 * S.P2[k] + b3 * S.P3[k]);
@@ -720,7 +690,6 @@ function emitStem(G, st, dens, cellRatio) {
     }
   }
   emitGrid(nu, nv, { wrap: true, id: G.id * 3 + 1, gloss: .35 });
-  // thorns
   for (const th of G.thorns) {
     const F = stemFrame(S, th.u), dir = norm(add(mul(F.n, Math.cos(th.a)), mul(F.b, Math.sin(th.a))));
     const base = add(F.p, mul(dir, Rr)), tipp = add(add(base, mul(dir, th.len)), mul(F.t, -th.len * .55));
@@ -728,7 +697,6 @@ function emitStem(G, st, dens, cellRatio) {
   }
 }
 
-// ---------------------------------------------------------------- leaves
 function leafProfile(shape, u) {
   if (shape === 'heart') return Math.pow(Math.max(0, Math.sin(Math.PI * Math.pow(u, .55))), .6);
   if (shape === 'sword') return Math.min(1, u * 10) * (u < .82 ? 1 - .25 * u : (1 - u) / .18 * .8);
@@ -740,7 +708,6 @@ function leafProfile(shape, u) {
 function emitBlade(origin, dOut, len, W, elev, droop, fold, serr, teeth, shape, open, gr, orderBase, id, dens, time, gloss, roll, wave, ex) {
   ex = ex || {};
   const twist = ex.twist || 0, cupL = ex.cup || 0, tipD = ex.tipDroop || 0;
-  // each leaf has its own shade, and younger leaves higher up are a little lighter
   const tint = 1 + (hash1(id * 7 + 3) - .5) * .24, young = .22 * clamp(orderBase);
   const nu = clamp(Math.ceil(len * dens * 1.35) + 4, 6, 96) | 0;
   let nv = clamp(Math.ceil(2 * W * dens * 1.25) + 3, 5, 71) | 0; if (nv % 2 === 0) nv++;
@@ -806,7 +773,6 @@ function emitLeaves(G, st, dens) {
       base = add(add(a, mul(pdir, pl)), droopV);
     }
     if (L.pairs > 0) {
-      // compound leaf: leaflet pairs along the rachis plus one at the end
       for (let k = 0; k < L.pairs; k++) {
         const s = (k + 1) / (L.pairs + 1);
         const pos = add(add(attach, mul(pdir, L.petiole * lerp(.4, 1, open) * (.35 + .65 * s))), [0, -L.petiole * .25 * s * s, 0]);
@@ -821,7 +787,6 @@ function emitLeaves(G, st, dens) {
   });
 }
 
-// ---------------------------------------------------------------- flower centers
 function emitCenters(G, st, M, T, dens, open) {
   const tx = l => add(mv(M, l), T);
   G.centers.forEach((C, ci) => {
@@ -866,13 +831,13 @@ function emitCenters(G, st, M, T, dens, open) {
       const nseg = Math.max(4, Math.ceil(L * dens * 1.6));
       emitCurve(fn, nseg, C.c, 1.3, 1.45, 0, id + 3);
       const nn = mv(M, [0, 1, 0]);
-      for (let k = 0; k < 46; k++) { // pollen-laden anthers on short stalks along the top
+      for (let k = 0; k < 46; k++) {
         const s = lerp(.5, .9, hash1(id + k * 11)), a = k * GOLDEN, p0 = fn(s);
         const o = mv(M, [Math.cos(a) * .025 * sc, .004, Math.sin(a) * .025 * sc]);
         push(p0[0] + o[0], p0[1] + o[1], p0[2] + o[2], nn[0], nn[1], nn[2], C.anth[0], C.anth[1], C.anth[2], 0, 0, 0, 1.45, 0, 2, hash1(id + k), 0, .3);
       }
       const e = fn(1);
-      for (let q = 0; q < 5; q++) { // five stigma pads
+      for (let q = 0; q < 5; q++) {
         const a = q * TAU / 5;
         for (let r = 0; r < 3; r++) {
           const o = mv(M, [Math.cos(a) * .018 * (r + 1) * sc, .012 * r * sc, Math.sin(a) * .018 * (r + 1) * sc]);
@@ -956,15 +921,12 @@ function pushHeadCache(G, M, T) {
   NP += n;
 }
 
-// a loose petal drifting down after full bloom
 function emitFalling(f, G, dens) {
   const M = mmul(rotY(f.ay), mmul(rotX(f.ax), rotZ(f.az)));
   const P = f.P;
   emitPetal(P, 1, 0, M, f.p, G.pal, -1, 0, 1, f.id, dens, 1);
 }
 
-// ============================================================ sky
-// stars live on the same character grid as the flower, like a terminal
 function makeSky(seed) {
   const R = new RNG('sky' + seed);
   const { cols, rows } = view, n = cols * rows;
@@ -988,7 +950,6 @@ function makeSky(seed) {
   return { stars, flares: [], nextFlare: R.range(.4, 1.2), R };
 }
 
-// ============================================================ app
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 const fg = document.createElement('canvas'), fctx = fg.getContext('2d');
@@ -1003,7 +964,7 @@ const BEARD = "\";:'^~,";
 const PITCH = .2;
 const SPARK = ['+', '+', '.', '·', "'", '+'];
 const FONT = 'ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, "DejaVu Sans Mono", "Liberation Mono", monospace';
-const D = 7;            // camera distance in world units
+const D = 7;
 const DRAW0 = .5, DRAW1 = 5.2, O_MAX = 1.56, GHOST = .3;
 const BLOOM0 = 4.4, TURN0 = 6.5;
 
@@ -1067,13 +1028,12 @@ function setFlower(seed) {
   sky = makeSky(G.skySeed);
   parts = []; gsparks = []; falls = []; fallTimer = 3; yaw = 0; yawUser = 0; densScale = 1; G.headCache = null;
   const url = new URL(location.href); url.searchParams.set('seed', seed); url.searchParams.delete('t');
-  try { history.replaceState(null, '', url); } catch (e) { /* sandboxed */ }
+  try { history.replaceState(null, '', url); } catch (e) { }
   document.getElementById('name').textContent = G.name;
 }
 
 function regrow(seed) { if (!pending) { pending = seed || newSeed(); fade = 1; } }
 
-// project a model point to the screen
 let viewM = rotY(0);
 function project(p, isModel = true) {
   let x = p[0], y = p[1], z = p[2];
@@ -1104,7 +1064,6 @@ function frame(now) {
   fpsAcc += dt; fpsN++;
   if (fpsAcc > .5) {
     fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0;
-    // if the device cannot keep up, lower the pixel density one step at a time
     slowFor = fps < 42 && !document.hidden ? slowFor + 1 : 0;
     if (slowFor >= 4 && quality < 2) { quality++; slowFor = 0; resize(); }
   }
@@ -1116,7 +1075,6 @@ function frame(now) {
   }
   const alpha = pending ? Math.max(0, fade) : 1;
 
-  // timeline
   const head = O_MAX * clamp((T - DRAW0) / (DRAW1 - DRAW0)) + (T > DRAW1 ? 1 : 0);
   const bx = clamp((T - BLOOM0) / G.bloomDur);
   const bloom = 1 - Math.pow(1 - bx, 1.7);
@@ -1137,14 +1095,12 @@ function frame(now) {
     G.stem.P3 = [B.P3[0] + wx, B.P3[1] - Math.abs(wx) * .05, B.P3[2] + wz];
   }
 
-  // build geometry
   const dens0 = view.S / view.cellW, dens = dens0 * densScale;
   NP = 0;
   emitStem(G, st, dens0, view.cellH / view.cellW);
   emitLeaves(G, st, dens0);
   headStart = NP;
   if (bx >= 1 && st.head >= 1) {
-    // fully open: the head no longer changes shape, so build it once and reuse it
     if (!G.headCache || G.headCacheDens !== dens) {
       const a = NP;
       emitHead(G, st, dens, true);
@@ -1155,7 +1111,6 @@ function frame(now) {
   } else emitHead(G, st, dens);
   NMODEL = NP;
 
-  // falling petals
   if (!paused && bloom > .99 && G.type !== 'tulip' && T > bloomEnd + 1.5) {
     fallTimer -= dt;
     if (fallTimer <= 0) {
@@ -1181,11 +1136,9 @@ function frame(now) {
     emitFalling(f, G, dens);
   }
   falls = falls.filter(f => f.p[1] > fit.ymin - .4);
-  // keep the point count near the budget: dense flowers get thinner sampling, sparse ones full detail
   const budget = 42000;
   if (NP > budget * 1.1 && densScale > .7) densScale = Math.max(.7, Math.floor(densScale * Math.sqrt(budget / NP) * 20) / 20);
 
-  // splat into the character grid
   const { cols, rows, cellW, cellH, S, cx, cy, yMid } = view;
   zb.fill(-1e9); win.fill(-1); ghost.fill(9);
   let bx0 = cols, bx1 = -1, by0 = rows, by1 = -1;
@@ -1209,7 +1162,6 @@ function frame(now) {
     if (qz > zb[idx]) { zb[idx] = qz; win[idx] = p; if (c < bx0) bx0 = c; if (c > bx1) bx1 = c; if (r < by0) by0 = r; if (r > by1) by1 = r; }
   }
 
-  // fill pinholes: an empty cell between two filled cells at about the same depth (inside the flower's box only)
   {
     const r0 = Math.max(1, by0), r1 = Math.min(rows - 2, by1), c0 = Math.max(1, bx0), c1 = Math.min(cols - 2, bx1);
     let nf = 0;
@@ -1231,7 +1183,6 @@ function frame(now) {
     }
   }
 
-  // shade cells and choose glyphs
   buckets.clear();
   nFresh = 0; nFreshH = 0;
   letters = 0; flickN = 0;
@@ -1258,7 +1209,7 @@ function frame(now) {
     const facing = nz >= 0 ? 1 : -1;
     if (nz < 0) { nx = -nx; ny = -ny; nz = -nz; }
     const dl = nx * LK[0] + ny * LK[1] + nz * LK[2], diff = Math.max(0, dl);
-    const trans = BUF[o + 16] !== 0 ? Math.max(0, -dl) * .3 : 0; // thin petals and leaves glow when backlit
+    const trans = BUF[o + 16] !== 0 ? Math.max(0, -dl) * .3 : 0;
     const lum = .2 + .8 * diff + trans;
     const rim = Math.pow(1 - nz, 3) * .45;
     const spec = BUF[o + 17] * Math.pow(Math.max(0, nx * HK[0] + ny * HK[1] + nz * HK[2]), 24);
@@ -1287,8 +1238,6 @@ function frame(now) {
         if (model) { tx = V[0] * a + V[1] * bb + V[2] * c; ty = V[3] * a + V[4] * bb + V[5] * c; } else { tx = a; ty = bb; }
         isStroke = true;
       } else if (nz < (kind === 5 ? (was ? .55 : .45) : (was ? .28 : .2))) { tx = -ny; ty = nx; isStroke = true; }
-      // outer outline: any stroke. inside the flower: diagonal and vertical strokes keep edges crisp,
-      // but a horizontal rim becomes a bright line of dense letters instead of a row of dashes
       let rim = false;
       if (isStroke) {
         const c0 = idx % cols;
@@ -1302,7 +1251,6 @@ function frame(now) {
         if (ang < .42) ch = (idx + cols < cols * rows && win[idx + cols] < 0) ? '_' : '-';
         else if (ang > 1.2) ch = '|';
         else ch = dx * dy < 0 ? '/' : '\\';
-        // near a bin edge, keep last frame's stroke so it does not flutter
         if (was && ch !== pch && (Math.abs(ang - .42) < .12 || Math.abs(ang - 1.2) < .12)) ch = pch;
         r *= 1.08; g *= 1.08; b *= 1.08;
       } else {
@@ -1327,10 +1275,8 @@ function frame(now) {
   }
 
   flickAvg = flickAvg * .9 + .1 * (letters ? flickN / letters : 0);
-  // particles
   updateParticles(dt, head, bloom, st);
 
-  // ---------------- draw
   const dpr = view.dpr;
   fctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   fctx.clearRect(0, 0, view.w, view.h);
@@ -1389,7 +1335,6 @@ function addBucket(q, idx) {
   l.push(idx);
 }
 
-// ---------------------------------------------------------------- sky drawing
 function cellFree(c, r) {
   if (c < 0 || r < 0 || c >= view.cols || r >= view.rows) return false;
   return win[r * view.cols + c] < 0;
@@ -1401,7 +1346,6 @@ function drawSky(c, t, A, dt) {
   c.textBaseline = 'top';
   for (const s of sky.stars) {
     const phase = t * s.sp + s.ph;
-    // each dark point of the twinkle is a new appearance: move the star to a fresh random cell
     const cyc = Math.floor((phase + Math.PI / 2) / TAU);
     if (s.cyc === undefined) s.cyc = cyc;
     else if (cyc !== s.cyc) {
@@ -1419,7 +1363,6 @@ function drawSky(c, t, A, dt) {
     else if (s.k === 1) c.fillText('+', x, y + yo);
     else { c.fillStyle = '#fff'; c.fillText('+', x, y + yo); }
   }
-  // flare stars flash up around the plant and fade away
   if (!paused) {
     sky.nextFlare -= dt;
     if (sky.nextFlare <= 0 && skyLevel > .05) {
@@ -1450,14 +1393,12 @@ function flareChar(c, cc, rr, ch, a) {
 function drawFlare(c, f, a) {
   if (a < .02) return;
   c.fillStyle = '#fff';
-  // vertical ray
   for (let i = 1; i <= f.L; i++) {
     const fa = a * Math.pow(1 - i / (f.L + 1), .7);
     const ch = i > f.L - 1 ? '.' : (i > f.L * .6 ? ':' : '|');
     flareChar(c, f.c, f.r - i, ch, fa);
     flareChar(c, f.c, f.r + i, ch, fa);
   }
-  // diagonal rays
   for (let i = 1; i <= f.D; i++) {
     const fa = a * .9 * Math.pow(1 - i / (f.D + 1), .7);
     flareChar(c, f.c - i, f.r - i, '\\', fa);
@@ -1465,27 +1406,23 @@ function drawFlare(c, f, a) {
     flareChar(c, f.c + i, f.r - i, '/', fa);
     flareChar(c, f.c - i, f.r + i, '/', fa);
   }
-  // dashed horizontal arm
   for (let i = 1; i <= f.H * 2; i += 2) {
     const fa = a * .9 * Math.pow(1 - i / (f.H * 2 + 1), .8);
     const ch = i >= f.H * 2 - 1 ? '.' : '-';
     flareChar(c, f.c - i, f.r, ch, fa);
     flareChar(c, f.c + i, f.r, ch, fa);
   }
-  // core
   flareChar(c, f.c, f.r, '+', Math.min(1, a * 1.5));
   flareChar(c, f.c, f.r, '+', a);
   c.globalAlpha = 1;
 }
 
-// ---------------------------------------------------------------- particles
 function spawn(x, y, vx, vy, life, ch, col, size, grav) {
   if (parts.length > 900) return;
   parts.push({ x, y, vx, vy, life, max: life, ch, col, size, grav, ph: Math.random() * TAU });
 }
 function updateParticles(dt, head, bloom, st) {
   if (paused) return;
-  // flower head forming: the dense spark cloud
   if (nFreshH > 0) {
     const n = Math.min(70, Math.round(dt * 340));
     for (let k = 0; k < n; k++) {
@@ -1497,20 +1434,17 @@ function updateParticles(dt, head, bloom, st) {
         ch: Math.random() < .55 ? '+' : '.', a: .45 + Math.random() * .55, up: Math.random() < .35 ? .8 + Math.random() * 2 : 0, y: 0 });
     }
   }
-  // stem and leaves forming: a light sprinkle
   if (nFresh > 0) {
     const n = Math.min(20, Math.round(dt * 95));
     for (let k = 0; k < n; k++) {
       const idx = FRESH[(Math.random() * nFresh) | 0];
       const r0 = (idx / view.cols) | 0, c0 = idx % view.cols;
-      // mostly sideways and a little upward, denser close to the forming point
       const dx = Math.round((Math.random() - .5) * 2 * Math.pow(Math.random(), 1.6) * 9);
       const dy = -Math.round(Math.pow(Math.random(), 1.5) * 5) + (Math.random() < .25 ? 1 : 0);
       gsparks.push({ c: c0 + dx, r: r0 + dy, life: 0, max: .3 + Math.random() * .7,
         ch: Math.random() < .55 ? '+' : '.', a: .45 + Math.random() * .55, up: Math.random() < .35 ? .8 + Math.random() * 2 : 0, y: 0 });
     }
   }
-  // glitter all around once the sky is out, also on the grid
   if (skyLevel > 0 && Math.random() < dt * 8 * skyLevel) {
     const top = project([G.pivot[0], fit.ymax, G.pivot[2]]), bot = project([G.pivot[0], fit.ymin, G.pivot[2]]);
     const rad = fit.R * view.S * 1.15;
@@ -1521,14 +1455,13 @@ function updateParticles(dt, head, bloom, st) {
     g.life += dt;
     if (g.life < 0) continue;
     if (g.fl) {
-      const k = g.life / g.max, e = 1 - Math.pow(1 - k, 3);   // ease out: quick start, gentle stop
+      const k = g.life / g.max, e = 1 - Math.pow(1 - k, 3);
       g.x = g.dx * e + Math.sin(g.life * g.sf + g.ph) * g.sway * k;
       g.y = g.dy * e + g.rise * k;
     } else g.y += g.up * dt;
   }
   gsparks = gsparks.filter(g => g.life < g.max);
   if (gsparks.length > 1500) gsparks.splice(0, gsparks.length - 1500);
-  // pollen drifting up once open
   if (bloom > .85 && Math.random() < dt * 2.5) {
     const hc = project(add(G.stem.P3, mv(headMatrix(G, T, 0), [0, G.headH * .5, 0])));
     const c = G.centers.length ? (G.centers[G.centers.length - 1].anth || G.centers[0].c1 || [1, .85, .3]) : [1, .9, .55];
@@ -1557,10 +1490,8 @@ function drawParticles(c, A) {
   c.textAlign = 'left'; c.textBaseline = 'top'; c.globalAlpha = 1;
 }
 
-// ---------------------------------------------------------------- label
 function setHud(on) { hudOn = on; document.body.classList.toggle('nohud', !on); }
 
-// ---------------------------------------------------------------- input
 let down = null;
 canvas.addEventListener('pointerdown', e => { down = { x: e.clientX, y: e.clientY, moved: false, yaw: yawUser }; canvas.setPointerCapture(e.pointerId); });
 canvas.addEventListener('pointermove', e => {
@@ -1588,7 +1519,6 @@ function savePng() {
 }
 window.addEventListener('resize', resize);
 
-// ---------------------------------------------------------------- start
 resize();
 setFlower(params.get('seed') || newSeed());
 setHud(hudOn);
