@@ -1347,15 +1347,14 @@ function frame(now) {
   }
   fctx.fillStyle = '#fff';
   for (const g of gsparks) {
-    const r = g.r - Math.round(g.y);
-    if (g.c < 0 || r < 0 || g.c >= cols || r >= rows || win[r * cols + g.c] >= 0) continue;
+    const r = g.r - Math.round(g.y), cc = g.c + Math.round(g.x || 0);
+    if (cc < 0 || r < 0 || cc >= cols || r >= rows || win[r * cols + cc] >= 0) continue;
     if (g.life < 0) continue;
     const k = g.life / g.max, a = alpha * g.a * (k < .15 ? k / .15 : Math.pow(1 - (k - .15) / .85, 1.3));
     if (a < .03) continue;
     fctx.globalAlpha = a;
-    fctx.fillText(g.ch, g.c * cellW, r * cellH + yo - (g.ch === '.' ? cellH * .25 : 0));
+    fctx.fillText(g.ch, cc * cellW, r * cellH + yo - (g.ch === '.' ? cellH * .25 : 0));
   }
-  if (G.burstFlares) for (const f of G.burstFlares) if (f.life > 0) drawFlare(fctx, f, alpha * Math.pow(Math.sin(Math.PI * f.life / f.max), .6));
   fctx.globalAlpha = 1;
   drawParticles(fctx, alpha);
   fctx.globalAlpha = 1;
@@ -1494,26 +1493,18 @@ function updateParticles(dt, head, bloom, st) {
         ch: Math.random() < .55 ? '+' : '.', a: .45 + Math.random() * .55, up: Math.random() < .35 ? .8 + Math.random() * 2 : 0, y: 0 });
     }
   }
-  // as the bud starts to open: a little burst just above it, a couple of flare stars and a few sparks
+  // as the bud starts to open: one point just above it, sparks bursting out from it
   if (bloom > .005 && G.burstAt === undefined) {
     G.burstAt = T;
     const top = project(add(G.stem.P3, mv(headMatrix(G, T, 0), [0, G.headH * 1.05, 0])));
-    const tc = (top[0] / view.cellW) | 0, tr = (top[1] / view.cellH) | 0;
-    const w = Math.max(3, Math.round(G.headH * view.S / view.cellW * .5));
-    G.burstFlares = [];
-    const nF = 2 + (Math.random() < .35 ? 1 : 0);
-    for (let k = 0; k < nF; k++) {
-      G.burstFlares.push({ c: tc + Math.round((Math.random() - .5) * 2 * w), r: tr - 2 - ((Math.random() * 5) | 0),
-        life: -k * .18, max: .8 + Math.random() * .4, L: 3 + ((Math.random() * 3) | 0), D: 1 + ((Math.random() * 2) | 0), H: 3 + ((Math.random() * 2) | 0) });
+    const tc = (top[0] / view.cellW) | 0, tr = ((top[1] / view.cellH) | 0) - 3;
+    const asp = view.cellH / view.cellW;   // cells are taller than wide: stretch sideways so the burst looks round
+    gsparks.push({ c: tc, r: tr, life: 0, max: .45, ch: '+', a: 1, up: 0, y: 0 });
+    for (let k = 0; k < 34; k++) {
+      const ang = Math.random() * TAU, sp = 3 + Math.random() * 9;
+      gsparks.push({ c: tc, r: tr, life: -Math.random() * .25, max: .35 + Math.random() * .55, ch: Math.random() < .65 ? '+' : '.',
+        a: .75 + Math.random() * .25, up: 0, y: 0, x: 0, vx: Math.cos(ang) * sp * asp, vy: -Math.sin(ang) * sp });
     }
-    for (let k = 0; k < 18; k++) {
-      gsparks.push({ c: tc + Math.round((Math.random() - .5) * 2 * w * 1.3), r: tr - ((Math.random() * 7) | 0), life: -Math.random() * .3,
-        max: .4 + Math.random() * .6, ch: Math.random() < .7 ? '+' : '.', a: .6 + Math.random() * .4, up: Math.random() < .4 ? .8 + Math.random() * 1.5 : 0, y: 0 });
-    }
-  }
-  if (G.burstFlares) {
-    for (const f of G.burstFlares) f.life += dt;
-    G.burstFlares = G.burstFlares.filter(f => f.life < f.max);
   }
   // glitter all around once the sky is out, also on the grid
   if (skyLevel > 0 && Math.random() < dt * 8 * skyLevel) {
@@ -1522,7 +1513,12 @@ function updateParticles(dt, head, bloom, st) {
     const x = view.cx + (Math.random() - .5) * 2 * rad, y = lerp(top[1], bot[1], Math.random());
     gsparks.push({ c: (x / view.cellW) | 0, r: (y / view.cellH) | 0, life: 0, max: .5 + Math.random() * .9, ch: Math.random() < .6 ? '+' : '.', a: .7, up: 0, y: 0 });
   }
-  for (const g of gsparks) { g.life += dt; g.y += g.up * dt; }
+  for (const g of gsparks) {
+    g.life += dt;
+    if (g.life < 0) continue;
+    g.y += (g.up + (g.vy || 0)) * dt;
+    if (g.vx) { g.x += g.vx * dt; g.vx *= 1 - dt * 1.5; g.vy *= 1 - dt * 1.5; }
+  }
   gsparks = gsparks.filter(g => g.life < g.max);
   if (gsparks.length > 1500) gsparks.splice(0, gsparks.length - 1500);
   // pollen drifting up once open
