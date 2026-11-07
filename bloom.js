@@ -1499,13 +1499,16 @@ function updateParticles(dt, head, bloom, st) {
     const top = project(add(G.stem.P3, mv(headMatrix(G, T, 0), [0, G.headH * 1.05, 0])));
     const tc = (top[0] / view.cellW) | 0, tr = ((top[1] / view.cellH) | 0) - 3;
     const asp = view.cellH / view.cellW;   // cells are taller than wide: stretch sideways so the burst looks round
-    // a sparse, uneven scatter: each spark has its own delay, speed, direction and lifetime
-    const n = 9 + ((Math.random() * 5) | 0);
+    // an uneven scatter with real momentum: each spark launches fast, drag slows it, gravity bends it back down
+    const n = 22 + ((Math.random() * 9) | 0);
     for (let k = 0; k < n; k++) {
-      const ang = -Math.PI / 2 + (Math.random() - .5) * 2 * 1.9, sp = 1.5 + Math.pow(Math.random(), 2) * 11;
-      gsparks.push({ c: tc + Math.round((Math.random() - .5) * 2), r: tr + Math.round((Math.random() - .5) * 2), life: -Math.random() * .7,
-        max: .3 + Math.random() * .8, ch: Math.random() < .55 ? '+' : '.', a: .45 + Math.random() * .55, up: 0, y: 0, x: 0,
-        vx: Math.cos(ang) * sp * asp, vy: -Math.sin(ang) * sp });
+      const ang = -Math.PI / 2 + (Math.random() - .5) * 2 * 2.2;   // mostly up and out, a few sideways or lower
+      const sp = 6 + Math.pow(Math.random(), 1.4) * 26;            // cells per second at launch
+      gsparks.push({ c: tc + Math.round((Math.random() - .5) * 4), r: tr + Math.round((Math.random() - .5) * 3),
+        life: -Math.pow(Math.random(), 1.5) * .6, max: .6 + Math.random() * .9,
+        ch: Math.random() < .55 ? '+' : '.', a: .5 + Math.random() * .5, up: 0, y: 0, x: 0,
+        vx: Math.cos(ang) * sp * asp, vy: -Math.sin(ang) * sp,
+        drag: 1.6 + Math.random() * 1.6, grav: 7 + Math.random() * 7 });
     }
   }
   // glitter all around once the sky is out, also on the grid
@@ -1518,8 +1521,12 @@ function updateParticles(dt, head, bloom, st) {
   for (const g of gsparks) {
     g.life += dt;
     if (g.life < 0) continue;
-    g.y += (g.up + (g.vy || 0)) * dt;
-    if (g.vx) { g.x += g.vx * dt; g.vx *= 1 - dt * 1.5; g.vy *= 1 - dt * 1.5; }
+    if (g.vx !== undefined) {
+      // momentum: move, then drag slows both axes and gravity pulls downward
+      g.x += g.vx * dt; g.y += g.vy * dt;
+      const d = Math.exp(-g.drag * dt);
+      g.vx *= d; g.vy = g.vy * d - g.grav * dt;
+    } else g.y += g.up * dt;
   }
   gsparks = gsparks.filter(g => g.life < g.max);
   if (gsparks.length > 1500) gsparks.splice(0, gsparks.length - 1500);
