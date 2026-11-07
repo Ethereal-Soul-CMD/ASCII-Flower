@@ -1481,15 +1481,29 @@ function updateParticles(dt, head, bloom, st) {
   if (paused) return;
   // diamond dust: a cloud of grid sparks thrown off whatever is forming right now
   if (nFresh > 0) {
-    const n = Math.min(70, Math.round(dt * 340));
+    const n = Math.min(20, Math.round(dt * 95));
     for (let k = 0; k < n; k++) {
       const idx = FRESH[(Math.random() * nFresh) | 0];
       const r0 = (idx / view.cols) | 0, c0 = idx % view.cols;
       // mostly sideways and a little upward, denser close to the forming point
-      const dx = Math.round((Math.random() - .5) * 2 * Math.pow(Math.random(), 1.4) * 13);
-      const dy = -Math.round(Math.pow(Math.random(), 1.3) * 7) + (Math.random() < .3 ? Math.round(Math.random() * 2) : 0);
+      const dx = Math.round((Math.random() - .5) * 2 * Math.pow(Math.random(), 1.6) * 9);
+      const dy = -Math.round(Math.pow(Math.random(), 1.5) * 5) + (Math.random() < .25 ? 1 : 0);
       gsparks.push({ c: c0 + dx, r: r0 + dy, life: 0, max: .3 + Math.random() * .7,
         ch: Math.random() < .55 ? '+' : '.', a: .45 + Math.random() * .55, up: Math.random() < .35 ? .8 + Math.random() * 2 : 0, y: 0 });
+    }
+  }
+  // when the flower finishes forming, a burst of sparks around the head
+  if (bloom >= .97 && G.burstAt === undefined) G.burstAt = T;
+  if (G.burstAt !== undefined && T - G.burstAt < .9) {
+    const k = (T - G.burstAt) / .9, rate = 900 * (1 - k) * (1 - k);
+    const hc = project(add(G.stem.P3, mv(headMatrix(G, T, 0), [0, G.headH * .45, 0])));
+    const R0 = G.headH * view.S * 1.05;
+    const n = Math.min(80, Math.round(dt * rate));
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * TAU, rr = R0 * (.55 + .75 * Math.sqrt(Math.random()));
+      const x = hc[0] + Math.cos(a) * rr, y = hc[1] + Math.sin(a) * rr * .8;
+      gsparks.push({ c: (x / view.cellW) | 0, r: (y / view.cellH) | 0, life: 0, max: .45 + Math.random() * .9,
+        ch: Math.random() < .65 ? '+' : '.', a: .6 + Math.random() * .4, up: Math.random() < .5 ? 1 + Math.random() * 3 : 0, y: 0 });
     }
   }
   // glitter all around once the sky is out, also on the grid
